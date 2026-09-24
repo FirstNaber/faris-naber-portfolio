@@ -49,14 +49,14 @@ const FLUID_FS = (() => {
   float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
     return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
-  float fbm(vec2 p){float v=0.,a=.52;for(int i=0;i<6;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+  float fbm(vec2 p){float v=0.,a=.52;for(int i=0;i<6;i++){v+=a*n(p);p=p*2.02+vec2(1.7,9.2);a*=.44;}return v;}
   void main(){
     vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
     float d=length(uv);
     float T=t*.01;
     vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
-    vec2 w=vec2(fbm(uv*1.4+3.8*q+vec2(1.7,9.2)+T*1.3),fbm(uv*1.4+3.8*q+vec2(8.3,2.8)-T));
-    float f=fbm(uv*1.7+4.*w);
+    vec2 w=vec2(fbm(uv*1.37+3.6*q+vec2(1.7,9.2)+T*1.3),fbm(uv*1.37+3.6*q+vec2(8.3,2.8)-T));
+    float f=fbm(uv*1.62+3.8*w);
     vec3 c=mix(vec3(.05,.015,.01),vec3(.7,.15,.05),smoothstep(.22,.68,f));
     c=mix(c,vec3(1.,.4,.18),smoothstep(.48,.82,f*length(w)*1.35));
     c=mix(c,vec3(1.,.76,.4),smoothstep(.7,.98,f*w.x*1.55));
