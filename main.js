@@ -44,32 +44,37 @@ setTimeout(() => root.classList.add('loaded'), 1200);
 })();
 
 /* ---------- fluid (WebGL): the hero orb, and the same fluid seen through text ---------- */
-const FLUID_FS = (() => {
-  return `precision mediump float;uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;
-  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-  float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
-    return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
-  float fbm(vec2 p){float v=0.,a=.52;for(int i=0;i<6;i++){v+=a*n(p);p=p*2.02+vec2(1.7,9.2);a*=.44;}return v;}
-  void main(){
-    vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
-    float d=length(uv);
-    float T=t*.01;
-    vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
-    vec2 w=vec2(fbm(uv*1.37+3.6*q+vec2(1.7,9.2)+T*1.3),fbm(uv*1.37+3.6*q+vec2(8.3,2.8)-T));
-    float f=fbm(uv*1.62+3.8*w);
-    vec3 c=mix(vec3(.05,.015,.01),vec3(.7,.15,.05),smoothstep(.22,.68,f));
-    c=mix(c,vec3(1.,.4,.18),smoothstep(.48,.82,f*length(w)*1.35));
-    c=mix(c,vec3(1.,.76,.4),smoothstep(.7,.98,f*w.x*1.55));
-    if(useMask>.5){ c=mix(vec3(.93,.33,.19),c*1.35,.55); }  // letters: brighter coral with the smoke moving through
-    if(useMask<.5){
-    float rim=smoothstep(.6,1.,d)*smoothstep(.2,-.9,uv.x);
-    c+=vec3(1.,.45,.15)*rim*.9;
-    c*=1.-smoothstep(.3,1.,d)*.35*smoothstep(-.3,.7,uv.x);
-    }
-    float a=useMask>.5 ? texture2D(m,gl_FragCoord.xy/r).a : 1.-smoothstep(.97,1.,d);
-    gl_FragColor=vec4(c*a,a);
-  }`;
-})();
+// Same technique and settings as the loehx.com hero: a double domain-warped fbm ("pattern")
+// mapped through a small palette, time = seconds * 0.2 * 0.97 + 7.
+const FLUID_FS = `
+precision highp float;
+uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;
+const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
+const vec3 C1=vec3(0.);             // #000000
+const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
+const vec3 C5=vec3(1.,.878,.2);     // #ffe033 yellow
+vec3 pal(float i){int k=int(mod(i,6.));
+  if(k==0)return C0; if(k==1)return C1; if(k==2)return C0; if(k==3)return C0; if(k==4)return C4; return C5;}
+vec3 cmap(float x){float n=5.;float tt=fract(clamp(x,0.,1.)*.92);float p=tt*n;float i0=floor(p);float i1=min(i0+1.,n);
+  return mix(pal(i0),pal(i1),smoothstep(0.,1.,fract(p)));}
+float rnd(vec2 n){return fract(sin(dot(n,vec2(12.9898,4.1414)))*43758.5453);}
+float noise(vec2 p){vec2 ip=floor(p);vec2 u=fract(p);u=u*u*(3.-2.*u);
+  float res=mix(mix(rnd(ip),rnd(ip+vec2(1.,0.)),u.x),mix(rnd(ip+vec2(0.,1.)),rnd(ip+vec2(1.,1.)),u.x),u.y);return res*res;}
+const mat2 mtx=mat2(.8,.6,-.6,.8);
+float fbm(vec2 p,float T,float ts){float f=0.;
+  f+=.5*noise(p+T);p=mtx*p*2.02; f+=.03125*noise(p);p=mtx*p*2.01; f+=.25*noise(p);p=mtx*p*2.03;
+  f+=.125*noise(p);p=mtx*p*2.01; f+=.0625*noise(p);p=mtx*p*2.04; f+=.015625*noise(p+ts);return f/.96875;}
+float pattern(vec2 p,float T,float ts){float a=fbm(p,T,ts);return fbm(p+fbm(p+a,T,ts),T,ts);}
+void main(){
+  float T=t;float ts=sin(T);
+  vec2 uv=gl_FragCoord.xy/r.x;
+  float shade=pattern(uv,T,ts);
+  vec3 col=cmap(shade);
+  float a;
+  if(useMask>.5){a=texture2D(m,gl_FragCoord.xy/r).a;}
+  else{vec2 c=r*.5;float rad=min(r.x,r.y)*.5;a=1.-smoothstep(rad-1.5,rad,distance(gl_FragCoord.xy,c));}
+  gl_FragColor=vec4(col*a,a);
+}`;
 
 function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
@@ -102,7 +107,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
     if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
-    gl.uniform2f(uR, W, H); gl.uniform1f(uT, reduce ? 20 : t / 1000 + 20 + tOff);
+    gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : t / 1000 + tOff) * 0.2 * 0.97 + 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     onFrame && onFrame();
     if (visible && !reduce) requestAnimationFrame(frame);
