@@ -53,9 +53,11 @@ const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
 const vec3 C1=vec3(0.);             // #000000
 const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
 const vec3 C5=vec3(1.,.878,.2);     // #ffe033 yellow
+const vec3 C6=vec3(.318,.949,.945); // #51f2f1 teal, the complement used in the LET'S TALK letters
 vec3 pal(float i){int k=int(mod(i,6.));
+  if(useMask>.5){ if(k==0)return C0; if(k==1)return C1; if(k==2)return C6; if(k==3)return C0; if(k==4)return C5; return C4; }
   if(k==0)return C0; if(k==1)return C1; if(k==2)return C0; if(k==3)return C0; if(k==4)return C4; return C5;}
-vec3 cmap(float x){float n=5.;float tt=fract(clamp(x,0.,1.)*.92);float p=tt*n;float i0=floor(p);float i1=min(i0+1.,n);
+vec3 cmap(float x,float ph){float n=5.;float tt=fract(clamp(x,0.,1.)*.92+ph);float p=tt*n;float i0=floor(p);float i1=min(i0+1.,n);
   return mix(pal(i0),pal(i1),smoothstep(0.,1.,fract(p)));}
 float rnd(vec2 n){return fract(sin(dot(n,vec2(12.9898,4.1414)))*43758.5453);}
 float noise(vec2 p){vec2 ip=floor(p);vec2 u=fract(p);u=u*u*(3.-2.*u);
@@ -68,8 +70,10 @@ float pattern(vec2 p,float T,float ts){float a=fbm(p,T,ts);return fbm(p+fbm(p+a,
 void main(){
   float T=t;float ts=sin(T);
   vec2 uv=gl_FragCoord.xy/r.x;
+  if(useMask>.5) uv*=2.2;                         // denser pattern: more change inside each letter
   float shade=pattern(uv,T,ts);
-  vec3 col=cmap(shade);
+  float ph=useMask>.5 ? fract(T*.35) : 0.;         // letters cycle through the palette over time
+  vec3 col=cmap(shade,ph);
   float a;
   if(useMask>.5){a=texture2D(m,gl_FragCoord.xy/r).a;}
   else{vec2 c=r*.5;float rad=min(r.x,r.y)*.5;a=1.-smoothstep(rad-1.5,rad,distance(gl_FragCoord.xy,c));}
