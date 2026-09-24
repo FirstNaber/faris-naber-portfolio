@@ -12,7 +12,7 @@ git add -A
 git commit -qm "${1:-Update site}" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 git push -q
 echo "pushed build $new, waiting for GitHub Pages..."
-for i in $(seq 1 60); do
+for i in $(seq 1 120); do
   if curl -s "$URL?nc=$RANDOM$i" | grep -q "name=\"build\" content=\"$new\""; then
     echo "live: build $new"
     [ "${NO_OPEN:-}" = "1" ] || open "$URL?b=$new${2:-}"
