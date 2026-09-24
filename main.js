@@ -48,13 +48,14 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   const cv = document.getElementById('orb');
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
   if (!gl) { cv.style.background = 'radial-gradient(circle at 35% 40%,#ff8a4a,#b3240f 45%,#2a0c06 72%,transparent 73%)'; return; }
+  // BANDS: 0 = continents/lava, 1 = gas-giant bands. RIDGE: crispness of the surface detail.
   const PAL = {
-    // burnt sienna / rust / dusty apricot / pale cream, amber atmosphere
-    ember: 'vec3 PAL0=vec3(.13,.05,.035),PAL1=vec3(.55,.2,.1),PAL2=vec3(.86,.45,.26),PAL3=vec3(.98,.82,.62),ATM=vec3(1.,.5,.28);',
-    dusk:  'vec3 PAL0=vec3(.12,.06,.07),PAL1=vec3(.48,.2,.16),PAL2=vec3(.8,.46,.34),PAL3=vec3(.95,.8,.7),ATM=vec3(.98,.55,.42);',
-    mars:  'vec3 PAL0=vec3(.16,.07,.04),PAL1=vec3(.6,.27,.13),PAL2=vec3(.82,.52,.3),PAL3=vec3(.93,.78,.58),ATM=vec3(1.,.62,.36);',
+    lava:  'vec3 PAL0=vec3(.035,.03,.03),PAL1=vec3(.11,.09,.085),PAL2=vec3(.95,.34,.12),PAL3=vec3(1.,.72,.38),ATM=vec3(1.,.42,.18);const float BANDS=0.;',
+    jove:  'vec3 PAL0=vec3(.36,.2,.12),PAL1=vec3(.72,.5,.34),PAL2=vec3(.93,.85,.72),PAL3=vec3(.62,.24,.12),ATM=vec3(.95,.72,.5);const float BANDS=1.;',
+    ice:   'vec3 PAL0=vec3(.04,.1,.16),PAL1=vec3(.16,.38,.5),PAL2=vec3(.55,.88,.9),PAL3=vec3(.93,.98,1.),ATM=vec3(.56,.94,.93);const float BANDS=1.;',
+    moon:  'vec3 PAL0=vec3(.07,.07,.075),PAL1=vec3(.3,.29,.28),PAL2=vec3(.62,.6,.57),PAL3=vec3(.9,.88,.84),ATM=vec3(1.,.45,.22);const float BANDS=0.;',
   };
-  const pal = PAL[new URLSearchParams(location.search).get('pal')] || PAL.mars;
+  const pal = PAL[new URLSearchParams(location.search).get('pal')] || PAL.lava;
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const fs = `
   #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -75,7 +76,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
     float R=.86;
     vec2 q0=uv/R; float d=length(q0);
     // outer atmosphere glow (outside the disc edge)
-    float glow=exp(-max(d-1.,0.)*6.)*.4*(1.-smoothstep(1.,1.16,d));
+    float glow=exp(-max(d-1.,0.)*14.)*.32*(1.-smoothstep(1.,1.09,d));
     vec3 col=vec3(0.);float alpha=0.;
     if(d<1.){
       float z=sqrt(1.-d*d);
@@ -83,22 +84,35 @@ setTimeout(() => root.classList.add('loaded'), 1200);
       // texture lives on the sphere surface, so it rotates and foreshortens like a real planet
       vec3 sp=rotY(t*.01)*nrm*1.6;
       float T=t*.004;
-      vec3 w=vec3(fbm(sp+T),fbm(sp+vec3(5.2,1.3,8.1)-T),fbm(sp+vec3(2.4,7.7,3.3)+T));
-      float f=fbm(sp*1.1+2.2*w);
-      float band=.5+.5*sin(nrm.y*9.+f*3.);          // soft latitude banding, like a gas giant
-      float m=clamp(f*.8+band*.2,0.,1.);
-      // muted, natural palette (set per variant)
-      vec3 c=mix(PAL0,PAL1,smoothstep(.2,.65,m));
-      c=mix(c,PAL2,smoothstep(.5,.9,m*length(w)*1.1));
-      c=mix(c,PAL3,smoothstep(.72,1.,f*w.x*1.35)*.7);
-      // lighting: gentle terminator, night side never goes pure black
+      vec3 w=vec3(fbm(sp*.8+T),fbm(sp*.8+vec3(5.2,1.3,8.1)-T),fbm(sp*.8+vec3(2.4,7.7,3.3)+T));
+      vec3 P=sp*1.5+1.1*w;
+      // ridged noise = crisp, sharp-edged detail (no fog)
+      float rg=0.,amp=.55;vec3 pp=P;
+      for(int i=0;i<6;i++){float v=1.-abs(2.*n(pp)-1.);rg+=amp*v*v;pp=pp*2.07+vec3(3.1,1.7,5.3);amp*=.5;}
+      float f=fbm(P);
+      vec3 c;
+      if(BANDS>.5){
+        float lat=nrm.y*6.+w.x*1.6+f*.9;
+        float bnd=.5+.5*sin(lat*3.1);
+        c=mix(PAL0,PAL1,smoothstep(.15,.55,bnd));
+        c=mix(c,PAL2,smoothstep(.55,.9,bnd)*.9);
+        c=mix(c,PAL3,smoothstep(.72,.95,rg)*.55);
+        c*=.86+.28*rg;
+      }else{
+        c=mix(PAL0,PAL1,smoothstep(.25,.75,f));
+        float crack=smoothstep(.78,.97,rg);            // glowing fissures / bright ridges
+        c=mix(c,PAL2,crack);
+        c=mix(c,PAL3,smoothstep(.93,1.,rg));
+        c*=.9+.25*rg;
+      }
       vec3 L=normalize(vec3(-.6,.42,.68));
       float diff=clamp(dot(nrm,L),0.,1.);
-      float lit=.28+.8*smoothstep(-.15,.95,diff);
-      c*=lit*mix(.72,1.,z);                            // soft limb darkening, no black outline
-      float fres=pow(1.-z,2.2);
-      c=mix(c,ATM,fres*(.35+.5*diff));                 // atmosphere scatters into the edge
-      col=c;alpha=1.-smoothstep(.95,1.005,d);
+      float lit=.16+.9*smoothstep(-.1,.9,diff);
+      if(BANDS<.5) lit=mix(lit,1.,smoothstep(.8,.97,rg)*.75); // lava glows on the night side too
+      c*=lit*mix(.8,1.,z);
+      float fres=pow(1.-z,4.);
+      c=mix(c,ATM,fres*(.25+.55*diff));                 // thin rim of atmosphere, not haze
+      col=c;alpha=1.-smoothstep(.985,1.002,d);
     }
     vec3 gcol=ATM*glow;
     col=col*alpha+gcol*(1.-alpha);
