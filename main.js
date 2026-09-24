@@ -119,7 +119,6 @@ function play(c) {
   c.classList.remove('play'); void c.offsetWidth; c.classList.add('play');
   c.querySelectorAll('[data-ccount]').forEach(ccount);
   c.querySelectorAll('.dots').forEach((cv) => setTimeout(() => dotField(cv), 250));
-  c.querySelectorAll('.cells.s32').forEach((el) => cells(el, 32, 'Month'));
   c.querySelectorAll('.cells.s29').forEach((el) => cells(el, 29, 'Unit'));
   c.querySelectorAll('.stepper').forEach(stepper);
 }
