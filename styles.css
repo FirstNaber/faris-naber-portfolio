@@ -282,3 +282,19 @@ main,.foot{position:relative;z-index:1}
 /* portrait: keep the photo's natural ratio, face centred horizontally in the screen */
 .phone-screen img{position:absolute;top:0;left:50%;width:auto;height:100%;max-width:none;object-fit:initial;transform:translateX(-60.5%)}
 .glare{display:none}
+
+/* real logos, shown as white marks */
+.track>*{margin-right:clamp(56px,7vw,110px);flex:none}
+.lg-img{display:block;width:auto;filter:brightness(0) invert(1);opacity:.62;transition:opacity .3s}
+.lg-img:hover,.lg-rr:hover{opacity:1}
+.lg-pmi{height:clamp(30px,3vw,42px)}
+.lg-iqos{height:clamp(20px,2vw,28px)}
+.lg-im{height:clamp(18px,1.9vw,26px)}
+.lg-ird{height:clamp(24px,2.4vw,34px)}
+.lg-rr{display:flex;align-items:center;gap:10px;font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:clamp(24px,2.4vw,32px);letter-spacing:-.02em;color:#fff;opacity:.62;white-space:nowrap;line-height:1;transition:opacity .3s}
+.lg-rr img{height:1.1em;width:auto;filter:brightness(0) invert(1)}
+
+/* phone: shorter */
+.phone{width:auto;height:min(64vh,560px);aspect-ratio:9/17}
+@media(max-width:640px){.phone{height:min(58vh,480px)}}
+.lg-iqos{height:clamp(26px,2.6vw,36px)}
