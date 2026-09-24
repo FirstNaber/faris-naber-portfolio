@@ -43,13 +43,9 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   if (reduce) addEventListener('scroll', () => requestAnimationFrame(draw), { passive: true });
 })();
 
-/* ---------- fluid orb (WebGL) ---------- */
-(function orb() {
-  const cv = document.getElementById('orb');
-  const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
-  if (!gl) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; return; }
-  const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
-  const fs = `precision mediump float;uniform vec2 r;uniform float t;
+/* ---------- fluid (WebGL): the hero orb, and the same fluid seen through text ---------- */
+const FLUID_FS = (() => {
+  return `precision mediump float;uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;
   float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
     return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
@@ -58,49 +54,105 @@ setTimeout(() => root.classList.add('loaded'), 1200);
     vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
     float d=length(uv);
     float T=t*.006;
-    vec2 q=vec2(fbm(uv*1.3+T),fbm(uv*1.3+vec2(5.2,1.3)-T));
-    vec2 w=vec2(fbm(uv*1.2+2.9*q+vec2(1.7,9.2)+T*1.2),fbm(uv*1.2+2.9*q+vec2(8.3,2.8)-T));
-    float f=fbm(uv*1.45+3.2*w);                       // smoke density
-    float g=fbm(uv*.9+2.*q+vec2(3.3,7.1)+T*.7);        // slow large-scale field
-    // ink tide: the dark smoke slowly floods in and recedes (~70s cycle), unevenly across the disc
-    float tide=.5+.5*sin(t*.09+g*3.2+uv.x*.8-uv.y*.5);
-    float th=mix(.68,.5,tide);                        // tide up = more dark smoke
-    float ink=smoothstep(th-.1,th+.1,(f*.55+g*.45)/.9);
-    // flat coral base with warm highlights, like the reference
-    vec3 coral=vec3(.98,.35,.22);
-    vec3 hot=vec3(1.,.5,.26);
-    vec3 c=mix(coral,hot,smoothstep(.55,.9,1.-f)*.35);
-    c=mix(c,vec3(1.,.66,.3),smoothstep(.85,1.,(1.-f)*(1.-tide)*1.6)*.35);
-    vec3 dark=mix(vec3(.5,.17,.1),vec3(.07,.04,.035),smoothstep(.45,1.,ink));
-    c=mix(c,dark,ink);
-    float a=1.-smoothstep(.992,1.,d);
+    vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
+    vec2 w=vec2(fbm(uv*1.3+2.9*q+vec2(1.7,9.2)+T*1.2),fbm(uv*1.3+2.9*q+vec2(8.3,2.8)-T));
+    float f=fbm(uv*1.45+3.2*w);
+    vec3 c=mix(vec3(.05,.015,.01),vec3(.62,.12,.04),smoothstep(.15,.8,f));
+    c=mix(c,vec3(1.,.36,.16),smoothstep(.45,.95,f*length(w)*1.3));
+    c=mix(c,vec3(1.,.72,.35),smoothstep(.7,1.1,f*w.x*1.5));
+    if(useMask>.5){ c=mix(vec3(.93,.33,.19),c*1.35,.55); }  // letters: brighter coral with the smoke moving through
+    if(useMask<.5){
+    float rim=smoothstep(.6,1.,d)*smoothstep(.2,-.9,uv.x);
+    c+=vec3(1.,.45,.15)*rim*.9;
+    c*=1.-smoothstep(.3,1.,d)*.35*smoothstep(-.3,.7,uv.x);
+    }
+    float a=useMask>.5 ? texture2D(m,gl_FragCoord.xy/r).a : 1.-smoothstep(.97,1.,d);
     gl_FragColor=vec4(c*a,a);
   }`;
+})();
+
+function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
+  const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
+  if (!gl) return null;
+  const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
   const pr = gl.createProgram();
-  gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs));
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FLUID_FS));
   gl.linkProgram(pr); gl.useProgram(pr);
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't');
+  gl.uniform1f(gl.getUniformLocation(pr, 'useMask'), mask ? 1 : 0);
+  let tex = null;
+  if (mask) {
+    tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
   const tOff = +new URLSearchParams(location.search).get('orbt') || 0; // preview a later moment
-  let visible = true;
+  let visible = true, maskDirty = true;
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) requestAnimationFrame(frame); }).observe(cv);
+  addEventListener('resize', () => { maskDirty = true; });
   function frame(t) {
-    const s = Math.min(devicePixelRatio || 1, 1.5) * 0.75;
+    const s = Math.min(devicePixelRatio || 1, 1.5) * scale;
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
-    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); }
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
+    if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
     gl.uniform2f(uR, W, H); gl.uniform1f(uT, reduce ? 20 : t / 1000 + 20 + tOff);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    const y = scrollY;
-    cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
-    cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`;
+    onFrame && onFrame();
     if (visible && !reduce) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  addEventListener('scroll', () => { const y = scrollY; cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85)); cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`; }, { passive: true });
+  return { refresh() { maskDirty = true; requestAnimationFrame(frame); } };
+}
+
+/* hero orb */
+(function orb() {
+  const cv = document.getElementById('orb');
+  const place = () => {
+    const y = scrollY;
+    cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
+    cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`;
+  };
+  if (!fluid(cv)) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; }
+  addEventListener('scroll', place, { passive: true }); place();
+})();
+
+/* "LET'S TALK": the orb's fluid seen through the letters, like a window */
+(function windowText() {
+  const wrap = document.querySelector('.talk');
+  if (!wrap) return;
+  const cv = wrap.querySelector('.talk-fluid');
+  const words = [...wrap.querySelectorAll('.talk-w')];
+  const mc = document.createElement('canvas');
+  function mask(W, H, s) {
+    mc.width = W; mc.height = H;
+    const ctx = mc.getContext('2d');
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff';
+    const box = cv.getBoundingClientRect();
+    for (const w of words) {
+      const r = w.getBoundingClientRect(), cs = getComputedStyle(w);
+      const fs = parseFloat(cs.fontSize) * s;
+      ctx.font = `800 ${fs}px "Barlow Condensed"`;
+      ctx.letterSpacing = (parseFloat(cs.letterSpacing) || 0) * s + 'px';
+      const m = ctx.measureText(w.textContent);
+      const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent;
+      const lh = r.height * s;
+      const base = (r.top - box.top) * s + (lh - (A + D)) / 2 + A;
+      ctx.textAlign = 'left';
+      ctx.fillText(w.textContent.toUpperCase(), (r.left - box.left) * s, base);
+    }
+    return mc;
+  }
+  Promise.all([document.fonts.ready, document.fonts.load('800 100px "Barlow Condensed"')]).then(() => {
+    const f = fluid(cv, { mask, scale: 0.9 });
+    if (f) { wrap.classList.add('live'); addEventListener('resize', () => f.refresh()); }
+  });
 })();
 
 /* ---------- menu ---------- */
