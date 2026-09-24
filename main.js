@@ -369,8 +369,8 @@ document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 (function phone() {
   const ph = document.querySelector('.phone');
   if (!ph) return;
-  const REST = { rx: 6, ry: 22 };
-  let rx = REST.rx, ry = REST.ry, vx = 0, vy = 0, drag = null, idle = 0;
+  const REST = { rx: 8, ry: 26 };
+  let rx = REST.rx, ry = REST.ry, vx = 0, vy = 0, drag = null, idle = 100;
   const apply = () => { ph.style.setProperty('--rx', rx.toFixed(2) + 'deg'); ph.style.setProperty('--ry', ry.toFixed(2) + 'deg'); };
   ph.addEventListener('pointerdown', (e) => {
     drag = { x: e.clientX, y: e.clientY }; vx = vy = 0;
@@ -394,8 +394,10 @@ document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
       if (Math.abs(vy) < 0.05) {
         idle++;
         if (idle > 90) {
-          const target = REST.ry + Math.round((ry - REST.ry) / 360) * 360;
-          ry += (target - ry) * 0.04; rx += (REST.rx - rx) * 0.04;
+          // settle toward the resting angle, with a slow idle sway so it never looks frozen
+          const sway = Math.sin(performance.now() / 2600) * 7, bob = Math.sin(performance.now() / 3700) * 2.5;
+          const target = REST.ry + sway + Math.round((ry - REST.ry) / 360) * 360;
+          ry += (target - ry) * 0.04; rx += (REST.rx + bob - rx) * 0.04;
         }
       }
       apply();
