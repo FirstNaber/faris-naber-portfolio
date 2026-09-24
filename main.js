@@ -48,6 +48,13 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   const cv = document.getElementById('orb');
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
   if (!gl) { cv.style.background = 'radial-gradient(circle at 35% 40%,#ff8a4a,#b3240f 45%,#2a0c06 72%,transparent 73%)'; return; }
+  const PAL = {
+    // burnt sienna / rust / dusty apricot / pale cream, amber atmosphere
+    ember: 'vec3 PAL0=vec3(.13,.05,.035),PAL1=vec3(.55,.2,.1),PAL2=vec3(.86,.45,.26),PAL3=vec3(.98,.82,.62),ATM=vec3(1.,.5,.28);',
+    dusk:  'vec3 PAL0=vec3(.12,.06,.07),PAL1=vec3(.48,.2,.16),PAL2=vec3(.8,.46,.34),PAL3=vec3(.95,.8,.7),ATM=vec3(.98,.55,.42);',
+    mars:  'vec3 PAL0=vec3(.16,.07,.04),PAL1=vec3(.6,.27,.13),PAL2=vec3(.82,.52,.3),PAL3=vec3(.93,.78,.58),ATM=vec3(1.,.62,.36);',
+  };
+  const pal = PAL[new URLSearchParams(location.search).get('pal')] || PAL.mars;
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const fs = `
   #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -56,6 +63,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   precision mediump float;
   #endif
   uniform vec2 r;uniform float t;
+  PALETTE
   float h(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
   float n(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
     return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),
@@ -67,34 +75,37 @@ setTimeout(() => root.classList.add('loaded'), 1200);
     float R=.86;
     vec2 q0=uv/R; float d=length(q0);
     // outer atmosphere glow (outside the disc edge)
-    float glow=exp(-(d-1.)*7.)*step(1.,d)*.5*(1.-smoothstep(1.,1.14,d));
+    float glow=exp(-max(d-1.,0.)*6.)*.4*(1.-smoothstep(1.,1.16,d));
     vec3 col=vec3(0.);float alpha=0.;
     if(d<1.){
       float z=sqrt(1.-d*d);
       vec3 nrm=vec3(q0,z);
       // texture lives on the sphere surface, so it rotates and foreshortens like a real planet
-      vec3 sp=rotY(t*.035)*nrm*1.7;
-      float T=t*.012;
+      vec3 sp=rotY(t*.01)*nrm*1.6;
+      float T=t*.004;
       vec3 w=vec3(fbm(sp+T),fbm(sp+vec3(5.2,1.3,8.1)-T),fbm(sp+vec3(2.4,7.7,3.3)+T));
-      float f=fbm(sp*1.2+2.8*w);
-      vec3 c=mix(vec3(.05,.015,.01),vec3(.62,.12,.04),smoothstep(.25,.7,f));
-      c=mix(c,vec3(1.,.36,.16),smoothstep(.55,.85,f*length(w)*1.25));
-      c=mix(c,vec3(1.,.72,.35),smoothstep(.8,1.,f*w.x*1.5));
-      // lighting: sun from upper-left, soft terminator, limb darkening, warm fresnel rim
-      vec3 L=normalize(vec3(-.65,.45,.62));
+      float f=fbm(sp*1.1+2.2*w);
+      float band=.5+.5*sin(nrm.y*9.+f*3.);          // soft latitude banding, like a gas giant
+      float m=clamp(f*.8+band*.2,0.,1.);
+      // muted, natural palette (set per variant)
+      vec3 c=mix(PAL0,PAL1,smoothstep(.2,.65,m));
+      c=mix(c,PAL2,smoothstep(.5,.9,m*length(w)*1.1));
+      c=mix(c,PAL3,smoothstep(.72,1.,f*w.x*1.35)*.7);
+      // lighting: gentle terminator, night side never goes pure black
+      vec3 L=normalize(vec3(-.6,.42,.68));
       float diff=clamp(dot(nrm,L),0.,1.);
-      float lit=.10+.95*smoothstep(0.,.9,diff);
-      c*=lit*pow(z,.35);
-      float fres=pow(1.-z,3.);
-      c+=vec3(1.,.42,.14)*fres*(.25+.9*diff);
-      col=c;alpha=1.-smoothstep(.965,1.,d);
+      float lit=.28+.8*smoothstep(-.15,.95,diff);
+      c*=lit*mix(.72,1.,z);                            // soft limb darkening, no black outline
+      float fres=pow(1.-z,2.2);
+      c=mix(c,ATM,fres*(.35+.5*diff));                 // atmosphere scatters into the edge
+      col=c;alpha=1.-smoothstep(.95,1.005,d);
     }
-    vec3 gcol=vec3(1.,.36,.13)*glow;
+    vec3 gcol=ATM*glow;
     col=col*alpha+gcol*(1.-alpha);
-    float a=max(alpha,glow*.9);
+    float a=alpha+glow*(1.-alpha);
     gl_FragColor=vec4(col,a);
   }`;
-  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src.replace('PALETTE', pal)); gl.compileShader(s); return s; };
   const pr = gl.createProgram();
   gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs));
   gl.linkProgram(pr); gl.useProgram(pr);
