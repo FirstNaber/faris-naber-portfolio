@@ -48,7 +48,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
 // mapped through a small palette, time = seconds * 0.2 * 0.97 + 7.
 const FLUID_FS = `
 precision highp float;
-uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;
+uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform vec3 ms; // ms.xy = pointer (px), ms.z = strength
 const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
 const vec3 C1=vec3(0.);             // #000000
 const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
@@ -70,6 +70,10 @@ float pattern(vec2 p,float T,float ts){float a=fbm(p,T,ts);return fbm(p+fbm(p+a,
 void main(){
   float T=t;float ts=sin(T);
   vec2 uv=gl_FragCoord.xy/r.x;
+  // pointer: a soft swirl that stirs the fluid around the cursor
+  vec2 dm=gl_FragCoord.xy-ms.xy; float rad=r.x*.28;
+  float fall=exp(-dot(dm,dm)/(rad*rad))*ms.z;
+  uv+=(vec2(-dm.y,dm.x)/r.x)*.6*fall - (dm/r.x)*.18*fall;
   if(useMask>.5) uv*=2.2;                         // denser pattern: more change inside each letter
   float shade=pattern(uv,T,ts);
   float ph=useMask>.5 ? fract(T*.35) : 0.;         // letters cycle through the palette over time
@@ -80,7 +84,7 @@ void main(){
   gl_FragColor=vec4(col*a,a);
 }`;
 
-function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
+function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false } = {}) {
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
   if (!gl) return null;
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
@@ -92,7 +96,19 @@ function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't');
+  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uM = gl.getUniformLocation(pr, 'ms');
+  // pointer interaction: eased position and strength, so the swirl follows smoothly and fades out
+  const pt = { x: 0, y: 0, tx: 0, ty: 0, s: 0, ts: 0 };
+  if (pointer && !reduce) {
+    addEventListener('pointermove', (e) => {
+      const b = cv.getBoundingClientRect();
+      pt.tx = e.clientX - b.left; pt.ty = b.bottom - e.clientY;
+      const cx = b.width / 2, cy = b.height / 2, R = Math.min(b.width, b.height) / 2;
+      pt.ts = Math.hypot(pt.tx - cx, pt.ty - cy) < R * 1.25 ? 1 : 0;
+      if (!pt.s) { pt.x = pt.tx; pt.y = pt.ty; }
+    }, { passive: true });
+    document.addEventListener('pointerleave', () => { pt.ts = 0; });
+  }
   gl.uniform1f(gl.getUniformLocation(pr, 'useMask'), mask ? 1 : 0);
   let tex = null;
   if (mask) {
@@ -111,7 +127,9 @@ function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
     if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
-    gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : t / 1000 + tOff) * 0.2 * 0.97 + 7);
+    pt.x += (pt.tx - pt.x) * 0.06; pt.y += (pt.ty - pt.y) * 0.06; pt.s += (pt.ts - pt.s) * 0.04;
+    gl.uniform3f(uM, pt.x * s, pt.y * s, pt.s);
+    gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : t / 1000 + tOff) * speed * 0.97 + 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     onFrame && onFrame();
     if (visible && !reduce) requestAnimationFrame(frame);
@@ -128,7 +146,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75 } = {}) {
     cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
     cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`;
   };
-  if (!fluid(cv)) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; }
+  if (!fluid(cv, { speed: 0.15, pointer: true })) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; }
   addEventListener('scroll', place, { passive: true }); place();
 })();
 
