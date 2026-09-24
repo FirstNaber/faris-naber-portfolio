@@ -9,10 +9,27 @@
 <meta property="og:description" content="I build the motion. Then I sell with it.">
 <meta property="og:image" content="assets/faris-iqos-kiosk.jpg">
 <meta name="theme-color" content="#131313">
+<meta name="build" content="35">
+<script>
+// GitHub Pages lets browsers cache this page for ~10 minutes. On load, ask the server for the
+// current build number (bypassing the cache) and jump to a fresh URL if this copy is stale.
+(function () {
+  try {
+    var mine = document.querySelector('meta[name=build]').content;
+    fetch(location.pathname + '?nc=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+      var m = t.match(/name="build" content="(\d+)"/);
+      if (m && m[1] !== mine && sessionStorage.getItem('fn-build') !== m[1]) {
+        sessionStorage.setItem('fn-build', m[1]);
+        location.replace(location.pathname + '?b=' + m[1] + location.hash);
+      }
+    }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="styles.css?v=35">
 </head>
 <body>
 
@@ -73,7 +90,7 @@
           <div class="ph-face ph-back"><i class="ph-cam"><b></b><b></b><b></b></i><span class="ph-mark">FN</span></div>
           <div class="ph-face ph-front">
             <div class="phone-screen">
-              <img src="assets/faris-iqos-kiosk.jpg?v=34" alt="" width="768" height="1024" draggable="false">
+              <img src="assets/faris-iqos-kiosk.jpg?v=35" alt="" width="768" height="1024" draggable="false">
               <i class="island"></i>
             </div>
           </div>
@@ -346,6 +363,6 @@
 </main>
 <footer class="foot"><span>© Faris Naber</span><a href="#top">Back to top ↑</a></footer>
 
-<script src="main.js?v=34"></script>
+<script src="main.js?v=35"></script>
 </body>
 </html>

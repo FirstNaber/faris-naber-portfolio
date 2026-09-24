@@ -16,3 +16,7 @@ Open http://localhost:8000
 ## Deploy
 GitHub Pages serves the `main` branch root. Push to `main` and the site updates in about a minute.
 Settings → Pages → Source: Deploy from a branch → `main` / root.
+
+## Publishing a change
+Bump the number in `<meta name="build" content="…">` (and the `?v=` on styles.css / main.js) in `index.html`.
+Visitors with a cached copy are sent to the new build automatically.
