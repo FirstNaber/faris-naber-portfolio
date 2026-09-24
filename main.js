@@ -48,7 +48,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
 // mapped through a small palette, time = seconds * 0.2 * 0.97 + 7.
 const FLUID_FS = `
 precision highp float;
-uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform vec3 ms; // ms.xy = pointer (px), ms.z = strength
+uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform vec3 ms;uniform vec2 mv; // ms.xy = pointer (px), ms.z = strength, mv = pointer velocity
 const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
 const vec3 C1=vec3(0.);             // #000000
 const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
@@ -71,9 +71,11 @@ void main(){
   float T=t;float ts=sin(T);
   vec2 uv=gl_FragCoord.xy/r.x;
   // pointer: a soft swirl that stirs the fluid around the cursor
-  vec2 dm=gl_FragCoord.xy-ms.xy; float rad=r.x*.28;
+  vec2 dm=(gl_FragCoord.xy-ms.xy)/r.x; float rad=.22;
   float fall=exp(-dot(dm,dm)/(rad*rad))*ms.z;
-  uv+=(vec2(-dm.y,dm.x)/r.x)*.6*fall - (dm/r.x)*.18*fall;
+  float ang=2.2*fall; float ca=cos(ang),sa=sin(ang);
+  uv+=vec2(ca*dm.x-sa*dm.y,sa*dm.x+ca*dm.y)-dm;   // twist around the cursor
+  uv-=mv*fall*.9;                                   // drag the fluid along with the pointer
   if(useMask>.5) uv*=2.2;                         // denser pattern: more change inside each letter
   float shade=pattern(uv,T,ts);
   float ph=useMask>.5 ? fract(T*.35) : 0.;         // letters cycle through the palette over time
@@ -96,9 +98,9 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false }
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uM = gl.getUniformLocation(pr, 'ms');
+  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uM = gl.getUniformLocation(pr, 'ms'), uV = gl.getUniformLocation(pr, 'mv');
   // pointer interaction: eased position and strength, so the swirl follows smoothly and fades out
-  const pt = { x: 0, y: 0, tx: 0, ty: 0, s: 0, ts: 0 };
+  const pt = { x: 0, y: 0, tx: 0, ty: 0, s: 0, ts: 0, vx: 0, vy: 0 };
   if (pointer && !reduce) {
     addEventListener('pointermove', (e) => {
       const b = cv.getBoundingClientRect();
@@ -127,8 +129,11 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false }
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
     if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
-    pt.x += (pt.tx - pt.x) * 0.06; pt.y += (pt.ty - pt.y) * 0.06; pt.s += (pt.ts - pt.s) * 0.04;
-    gl.uniform3f(uM, pt.x * s, pt.y * s, pt.s);
+    const nx = pt.x + (pt.tx - pt.x) * 0.08, ny = pt.y + (pt.ty - pt.y) * 0.08;
+    const w = cv.clientWidth || 1;
+    pt.vx = pt.vx * 0.9 + ((nx - pt.x) / w) * 1.2; pt.vy = pt.vy * 0.9 + ((ny - pt.y) / w) * 1.2;
+    pt.x = nx; pt.y = ny; pt.s += (pt.ts - pt.s) * 0.05;
+    gl.uniform3f(uM, pt.x * s, pt.y * s, pt.s); gl.uniform2f(uV, pt.vx, pt.vy);
     gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : t / 1000 + tOff) * speed * 0.97 + 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     onFrame && onFrame();
