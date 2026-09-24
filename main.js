@@ -175,7 +175,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = f
     return mc;
   }
   Promise.all([document.fonts.ready, document.fonts.load('800 100px "Barlow Condensed"')]).then(() => {
-    const f = fluid(cv, { mask, scale: 0.9 });
+    const f = fluid(cv, { mask, scale: 0.9, scrollPhysics: true });
     if (f) { wrap.classList.add('live'); addEventListener('resize', () => f.refresh()); }
   });
 })();
