@@ -365,25 +365,43 @@ const io = new IntersectionObserver((entries) => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-/* ---------- phone: tilt toward the pointer ---------- */
+/* ---------- phone: drag to spin, with inertia; settles back to its resting angle ---------- */
 (function phone() {
-  const ph = document.querySelector('.phone'), stage = document.querySelector('.phone-stage');
-  if (!ph || reduce) return;
-  function tilt(x, y) {
-    ph.style.setProperty('--ry', (x * 28) + 'deg');
-    ph.style.setProperty('--rx', (-y * 18) + 'deg');
-  }
-  stage.addEventListener('pointermove', (e) => {
-    const b = ph.getBoundingClientRect();
-    tilt(Math.max(-1, Math.min(1, (e.clientX - (b.left + b.width / 2)) / (b.width * 1.5))),
-         Math.max(-1, Math.min(1, (e.clientY - (b.top + b.height / 2)) / (b.height))));
+  const ph = document.querySelector('.phone');
+  if (!ph) return;
+  const REST = { rx: 6, ry: 22 };
+  let rx = REST.rx, ry = REST.ry, vx = 0, vy = 0, drag = null, idle = 0;
+  const apply = () => { ph.style.setProperty('--rx', rx.toFixed(2) + 'deg'); ph.style.setProperty('--ry', ry.toFixed(2) + 'deg'); };
+  ph.addEventListener('pointerdown', (e) => {
+    drag = { x: e.clientX, y: e.clientY }; vx = vy = 0;
+    ph.setPointerCapture(e.pointerId); ph.classList.add('dragging');
   });
-  stage.addEventListener('pointerleave', () => { ph.style.removeProperty('--ry'); ph.style.removeProperty('--rx'); });
-  // on touch devices, tilt gently with scroll
-  addEventListener('scroll', () => {
-    if (matchMedia('(hover: hover)').matches) return;
-    const b = ph.getBoundingClientRect();
-    const p = (b.top + b.height / 2 - innerHeight / 2) / innerHeight;
-    tilt(-0.6 + p * 0.5, p * 0.6);
-  }, { passive: true });
+  ph.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag = { x: e.clientX, y: e.clientY };
+    vy = dx * 0.6; vx = -dy * 0.35;
+    ry += vy; rx = Math.max(-35, Math.min(35, rx + vx));
+    apply();
+  });
+  const end = () => { if (!drag) return; drag = null; idle = 0; ph.classList.remove('dragging'); };
+  ph.addEventListener('pointerup', end); ph.addEventListener('pointercancel', end);
+  function tick() {
+    if (!drag) {
+      // inertia first, then ease back to the nearest resting angle
+      vy *= 0.94; vx *= 0.9;
+      ry += vy; rx = Math.max(-35, Math.min(35, rx + vx));
+      if (Math.abs(vy) < 0.05) {
+        idle++;
+        if (idle > 90) {
+          const target = REST.ry + Math.round((ry - REST.ry) / 360) * 360;
+          ry += (target - ry) * 0.04; rx += (REST.rx - rx) * 0.04;
+        }
+      }
+      apply();
+    }
+    requestAnimationFrame(tick);
+  }
+  apply();
+  if (!reduce) requestAnimationFrame(tick);
 })();
