@@ -367,3 +367,8 @@ main,.foot{position:relative;z-index:1}
 .flip-obj{transition:color .5s .6s}.flip-obj::after{transition:width .5s cubic-bezier(.6,0,.2,1) .3s}
 .flip-arrow{transition:opacity .3s .8s,transform .3s .8s}
 .flip-open{transition:opacity .5s .95s,transform .5s cubic-bezier(.2,.8,.2,1) .95s}
+
+/* planet: never clipped by the hero, no circular mask, fades as you scroll away */
+.hero{overflow:visible;overflow-x:clip}
+#orb{border-radius:0;width:min(78vw,104vh);height:min(78vw,104vh);right:-12vw;will-change:transform,opacity}
+@media(max-width:1000px){#orb{width:120vw;height:120vw;right:-42vw;top:38%}}

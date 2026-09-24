@@ -43,32 +43,56 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   if (reduce) addEventListener('scroll', () => requestAnimationFrame(draw), { passive: true });
 })();
 
-/* ---------- fluid orb (WebGL) ---------- */
+/* ---------- fluid planet (WebGL): a lit 3D sphere, texture wrapped on its surface ---------- */
 (function orb() {
   const cv = document.getElementById('orb');
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
-  if (!gl) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; return; }
+  if (!gl) { cv.style.background = 'radial-gradient(circle at 35% 40%,#ff8a4a,#b3240f 45%,#2a0c06 72%,transparent 73%)'; return; }
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
-  const fs = `precision mediump float;uniform vec2 r;uniform float t;
-  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-  float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
-    return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
-  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+  const fs = `
+  #ifdef GL_FRAGMENT_PRECISION_HIGH
+  precision highp float;
+  #else
+  precision mediump float;
+  #endif
+  uniform vec2 r;uniform float t;
+  float h(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+  float n(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+    return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),
+               mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z);}
+  float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.02+vec3(1.7,9.2,3.1);a*=.5;}return v;}
+  mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0.,s,0.,1.,0.,-s,0.,c);}
   void main(){
     vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
-    float d=length(uv);
-    float T=t*.016;
-    vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
-    vec2 w=vec2(fbm(uv*1.4+3.5*q+vec2(1.7,9.2)+T*1.3),fbm(uv*1.4+3.5*q+vec2(8.3,2.8)-T));
-    float f=fbm(uv*1.6+3.8*w);
-    vec3 c=mix(vec3(.05,.015,.01),vec3(.62,.12,.04),smoothstep(.25,.7,f));
-    c=mix(c,vec3(1.,.36,.16),smoothstep(.55,.85,f*length(w)*1.3));
-    c=mix(c,vec3(1.,.72,.35),smoothstep(.78,1.,f*w.x*1.5));
-    float rim=smoothstep(.6,1.,d)*smoothstep(.2,-.9,uv.x);
-    c+=vec3(1.,.45,.15)*rim*.9;
-    c*=1.-smoothstep(.3,1.,d)*.35*smoothstep(-.3,.7,uv.x);
-    float a=1.-smoothstep(.985,1.,d);
-    gl_FragColor=vec4(c*a,a);
+    float R=.86;
+    vec2 q0=uv/R; float d=length(q0);
+    // outer atmosphere glow (outside the disc edge)
+    float glow=exp(-(d-1.)*7.)*step(1.,d)*.5*(1.-smoothstep(1.,1.14,d));
+    vec3 col=vec3(0.);float alpha=0.;
+    if(d<1.){
+      float z=sqrt(1.-d*d);
+      vec3 nrm=vec3(q0,z);
+      // texture lives on the sphere surface, so it rotates and foreshortens like a real planet
+      vec3 sp=rotY(t*.035)*nrm*1.7;
+      float T=t*.012;
+      vec3 w=vec3(fbm(sp+T),fbm(sp+vec3(5.2,1.3,8.1)-T),fbm(sp+vec3(2.4,7.7,3.3)+T));
+      float f=fbm(sp*1.2+2.8*w);
+      vec3 c=mix(vec3(.05,.015,.01),vec3(.62,.12,.04),smoothstep(.25,.7,f));
+      c=mix(c,vec3(1.,.36,.16),smoothstep(.55,.85,f*length(w)*1.25));
+      c=mix(c,vec3(1.,.72,.35),smoothstep(.8,1.,f*w.x*1.5));
+      // lighting: sun from upper-left, soft terminator, limb darkening, warm fresnel rim
+      vec3 L=normalize(vec3(-.65,.45,.62));
+      float diff=clamp(dot(nrm,L),0.,1.);
+      float lit=.10+.95*smoothstep(0.,.9,diff);
+      c*=lit*pow(z,.35);
+      float fres=pow(1.-z,3.);
+      c+=vec3(1.,.42,.14)*fres*(.25+.9*diff);
+      col=c;alpha=1.-smoothstep(.965,1.,d);
+    }
+    vec3 gcol=vec3(1.,.36,.13)*glow;
+    col=col*alpha+gcol*(1.-alpha);
+    float a=max(alpha,glow*.9);
+    gl_FragColor=vec4(col,a);
   }`;
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
   const pr = gl.createProgram();
@@ -81,18 +105,21 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't');
   let visible = true;
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) requestAnimationFrame(frame); }).observe(cv);
+  function place() {
+    const y = scrollY, fade = Math.max(0, 1 - y / (innerHeight * 0.85));
+    cv.style.transform = `translateY(calc(-50% + ${y * 0.22}px))`;
+    cv.style.opacity = fade;
+  }
   function frame(t) {
-    const s = Math.min(devicePixelRatio || 1, 1.5) * 0.75;
+    const s = Math.min(devicePixelRatio || 1, 2) * 0.85;
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); }
     gl.uniform2f(uR, W, H); gl.uniform1f(uT, reduce ? 20 : t / 1000 + 20);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    const y = scrollY;
-    cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`;
     if (visible && !reduce) requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
-  addEventListener('scroll', () => { const y = scrollY; cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`; }, { passive: true });
+  addEventListener('scroll', place, { passive: true });
+  place(); requestAnimationFrame(frame);
 })();
 
 /* ---------- menu ---------- */
