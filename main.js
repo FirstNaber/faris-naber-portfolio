@@ -48,14 +48,14 @@ setTimeout(() => root.classList.add('loaded'), 1200);
 // mapped through a small palette, time = seconds * 0.2 * 0.97 + 7.
 const FLUID_FS = `
 precision highp float;
-uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform vec3 ms;uniform vec2 mv; // ms.xy = pointer (px), ms.z = strength, mv = pointer velocity
+uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform float cyc;uniform float sv; // cyc: teal palette + colour cycling; sv: eased scroll velocity
 const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
 const vec3 C1=vec3(0.);             // #000000
 const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
 const vec3 C5=vec3(1.,.878,.2);     // #ffe033 yellow
 const vec3 C6=vec3(.318,.949,.945); // #51f2f1 teal, the complement used in the LET'S TALK letters
 vec3 pal(float i){int k=int(mod(i,6.));
-  if(useMask>.5){ if(k==0)return C0; if(k==1)return C1; if(k==2)return C6; if(k==3)return C0; if(k==4)return C5; return C4; }
+  if(cyc>.5){ if(k==0)return C0; if(k==1)return C1; if(k==2)return C6; if(k==3)return C0; if(k==4)return C5; return C4; }
   if(k==0)return C0; if(k==1)return C1; if(k==2)return C0; if(k==3)return C0; if(k==4)return C4; return C5;}
 vec3 cmap(float x,float ph){float n=5.;float tt=fract(clamp(x,0.,1.)*.92+ph);float p=tt*n;float i0=floor(p);float i1=min(i0+1.,n);
   return mix(pal(i0),pal(i1),smoothstep(0.,1.,fract(p)));}
@@ -70,15 +70,15 @@ float pattern(vec2 p,float T,float ts){float a=fbm(p,T,ts);return fbm(p+fbm(p+a,
 void main(){
   float T=t;float ts=sin(T);
   vec2 uv=gl_FragCoord.xy/r.x;
-  // pointer: a soft swirl that stirs the fluid around the cursor
-  vec2 dm=(gl_FragCoord.xy-ms.xy)/r.x; float rad=.22;
-  float fall=exp(-dot(dm,dm)/(rad*rad))*ms.z;
-  float ang=2.2*fall; float ca=cos(ang),sa=sin(ang);
-  uv+=vec2(ca*dm.x-sa*dm.y,sa*dm.x+ca*dm.y)-dm;   // twist around the cursor
-  uv-=mv*fall*.9;                                   // drag the fluid along with the pointer
+  // scroll physics: scrolling drags the fluid with the page and spins it around the centre;
+  // it eases back when the page stops (sv decays in JS)
+  vec2 dc=uv-vec2(.5,.5*r.y/r.x);
+  float ang=sv*1.6*exp(-dot(dc,dc)/.1); float ca=cos(ang),sa=sin(ang);
+  uv+=vec2(ca*dc.x-sa*dc.y,sa*dc.x+ca*dc.y)-dc;
+  uv.y-=sv*.25*(1.-length(dc));
   if(useMask>.5) uv*=2.2;                         // denser pattern: more change inside each letter
   float shade=pattern(uv,T,ts);
-  float ph=useMask>.5 ? fract(T*.35) : 0.;         // letters cycle through the palette over time
+  float ph=cyc>.5 ? fract(T*.35) : 0.;             // cycle through the palette over time
   vec3 col=cmap(shade,ph);
   float a;
   if(useMask>.5){a=texture2D(m,gl_FragCoord.xy/r).a;}
@@ -86,7 +86,7 @@ void main(){
   gl_FragColor=vec4(col*a,a);
 }`;
 
-function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false } = {}) {
+function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = false } = {}) {
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
   if (!gl) return null;
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
@@ -98,19 +98,10 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false }
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uM = gl.getUniformLocation(pr, 'ms'), uV = gl.getUniformLocation(pr, 'mv');
-  // pointer interaction: eased position and strength, so the swirl follows smoothly and fades out
-  const pt = { x: 0, y: 0, tx: 0, ty: 0, s: 0, ts: 0, vx: 0, vy: 0 };
-  if (pointer && !reduce) {
-    addEventListener('pointermove', (e) => {
-      const b = cv.getBoundingClientRect();
-      pt.tx = e.clientX - b.left; pt.ty = b.bottom - e.clientY;
-      const cx = b.width / 2, cy = b.height / 2, R = Math.min(b.width, b.height) / 2;
-      pt.ts = Math.hypot(pt.tx - cx, pt.ty - cy) < R * 1.25 ? 1 : 0;
-      if (!pt.s) { pt.x = pt.tx; pt.y = pt.ty; }
-    }, { passive: true });
-    document.addEventListener('pointerleave', () => { pt.ts = 0; });
-  }
+  const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 'sv');
+  gl.uniform1f(gl.getUniformLocation(pr, 'cyc'), 1);
+  // scroll physics: velocity from scrollY each frame, eased; scrolling also pushes the flow forward in time
+  let lastY = scrollY, sv = 0, clock = 0, lastT = null;
   gl.uniform1f(gl.getUniformLocation(pr, 'useMask'), mask ? 1 : 0);
   let tex = null;
   if (mask) {
@@ -129,12 +120,14 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false }
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
     if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
-    const nx = pt.x + (pt.tx - pt.x) * 0.08, ny = pt.y + (pt.ty - pt.y) * 0.08;
-    const w = cv.clientWidth || 1;
-    pt.vx = pt.vx * 0.9 + ((nx - pt.x) / w) * 1.2; pt.vy = pt.vy * 0.9 + ((ny - pt.y) / w) * 1.2;
-    pt.x = nx; pt.y = ny; pt.s += (pt.ts - pt.s) * 0.05;
-    gl.uniform3f(uM, pt.x * s, pt.y * s, pt.s); gl.uniform2f(uV, pt.vx, pt.vy);
-    gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : t / 1000 + tOff) * speed * 0.97 + 7);
+    const dt = lastT === null ? 0 : Math.min((t - lastT) / 1000, 0.1); lastT = t;
+    if (scrollPhysics && !reduce) {
+      const v = (scrollY - lastY) / innerHeight; lastY = scrollY;
+      sv += (Math.max(-1.5, Math.min(1.5, v * 14)) - sv) * 0.08;
+    }
+    clock += dt * (1 + Math.abs(sv) * 4);
+    gl.uniform1f(uS, sv);
+    gl.uniform2f(uR, W, H); gl.uniform1f(uT, (reduce ? 0 : clock + tOff) * speed * 0.97 + 7);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     onFrame && onFrame();
     if (visible && !reduce) requestAnimationFrame(frame);
@@ -148,10 +141,10 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, pointer = false }
   const cv = document.getElementById('orb');
   const place = () => {
     const y = scrollY;
-    cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
+    cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 1.2));
     cv.style.transform = `translateY(calc(-50% + ${y * 0.25}px)) scale(${1 + y / 4000})`;
   };
-  if (!fluid(cv, { speed: 0.15, pointer: true })) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; }
+  if (!fluid(cv, { speed: 0.15, scrollPhysics: true })) { cv.style.background = 'radial-gradient(circle at 35% 45%,#ff7a3d,#b3240f 45%,#2a0c06 70%,transparent 71%)'; }
   addEventListener('scroll', place, { passive: true }); place();
 })();
 
