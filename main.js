@@ -141,34 +141,43 @@ function count(el, attr) {
   })(t0);
 }
 
-/* ---------- 1,800-dot field, #3 highlighted ---------- */
+/* ---------- 1,800-dot field: #3 highlighted, sonar ripple, hover ranks ---------- */
 function dotField(cv) {
   const COLS = 60, ROWS = 30, N = COLS * ROWS, ME = 2;
+  const tip = cv.parentElement.querySelector('.dots-tip');
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const w = cv.clientWidth, h = w * ROWS / COLS;
-  cv.width = w * dpr; cv.height = h * dpr;
-  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-  const cw = w / COLS, r = Math.max(1, cw * 0.2);
-  const order = [...Array(N).keys()].map((i) => [i, Math.random()]);
-  const t0 = performance.now(), dur = reduce ? 0 : 1600;
+  let w, cw, r, ctx;
+  function size() {
+    w = cv.clientWidth; const h = w * ROWS / COLS;
+    cv.width = w * dpr; cv.height = h * dpr;
+    ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cw = w / COLS; r = Math.max(1, cw * 0.2);
+  }
+  size(); addEventListener('resize', size);
+  const mx = (ME % COLS + .5), my = (Math.floor(ME / COLS) + .5);
+  const dist = Array.from({ length: N }, (_, i) => Math.hypot(i % COLS + .5 - mx, Math.floor(i / COLS) + .5 - my));
+  const delay = Array.from({ length: N }, () => Math.random());
+  const t0 = performance.now(), intro = reduce ? 0 : 1600;
   let hover = -1;
   function draw(now) {
-    const p = dur ? Math.min((now - t0) / dur, 1) : 1;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#ffffff';
-    for (const [i, d] of order) {
+    const p = intro ? Math.min((now - t0) / intro, 1) : 1;
+    const wave = ((now - t0 - intro) / 1000 * 22) % 90;   // ring radius in cells, repeats
+    ctx.clearRect(0, 0, w, w * ROWS / COLS);
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < N; i++) {
       if (i === ME) continue;
-      const a = Math.max(0, Math.min(1, (p - d * 0.7) / 0.3));
+      const a = Math.max(0, Math.min(1, (p - delay[i] * 0.7) / 0.3));
       if (!a) continue;
-      ctx.globalAlpha = a * (i === hover ? 0.95 : 0.22);
+      let lum = 0.2;
+      if (p >= 1 && !reduce) { const d = Math.abs(dist[i] - wave); if (d < 3) lum += 0.5 * (1 - d / 3) * (1 - wave / 90); }
+      if (i === hover) lum = 1;
+      ctx.globalAlpha = a * lum;
       ctx.fillRect((i % COLS + .5) * cw - r, (Math.floor(i / COLS) + .5) * cw - r, r * 2, r * 2);
     }
     if (p >= 1) {
-      const x = (ME % COLS + .5) * cw, y = (Math.floor(ME / COLS) + .5) * cw;
-      const pulse = reduce ? 0 : (Math.sin(now / 380) + 1) / 2;
+      const x = mx * cw, y = my * cw, pulse = reduce ? 0 : (Math.sin(now / 380) + 1) / 2;
       ctx.fillStyle = TEAL;
-      ctx.globalAlpha = 0.25 * (1 - pulse);
-      ctx.beginPath(); ctx.arc(x, y, r * (3 + pulse * 4), 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.25 * (1 - pulse); ctx.beginPath(); ctx.arc(x, y, r * (3 + pulse * 4), 0, 7); ctx.fill();
       ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 7); ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -176,12 +185,58 @@ function dotField(cv) {
   }
   cv.onmousemove = (e) => {
     const b = cv.getBoundingClientRect();
-    hover = Math.floor((e.clientY - b.top) / cw) * COLS + Math.floor((e.clientX - b.left) / cw);
-    cv.title = hover === ME ? 'Rank #3: me' : 'Rank #' + (hover + 1).toLocaleString();
+    const c = Math.floor((e.clientX - b.left) / cw), rr = Math.floor((e.clientY - b.top) / cw);
+    hover = c >= 0 && c < COLS && rr >= 0 && rr < ROWS ? rr * COLS + c : -1;
+    if (hover < 0) return;
+    tip.textContent = hover === ME ? '#3 of 1,800 — me' : 'Rep #' + (hover + 1).toLocaleString();
+    tip.classList.toggle('me', hover === ME);
+    tip.style.left = ((hover % COLS + .5) * cw) + 'px';
+    tip.style.top = ((Math.floor(hover / COLS) + .5) * cw) + 'px';
+    tip.classList.add('on');
   };
-  cv.onmouseleave = () => { hover = -1; };
+  cv.onmouseleave = () => { hover = -1; tip.classList.remove('on'); };
   requestAnimationFrame(draw);
 }
+
+/* ---------- Rep Rally growth chart, scrubbed by scroll ---------- */
+(function growth() {
+  const box = document.querySelector('.growth2');
+  if (!box) return;
+  const line = box.querySelector('.g2-line'), clip = box.querySelector('.g2-cliprect');
+  const dot = box.querySelector('.g2-head-dot');
+  const accEl = box.querySelector('.g2-acc'), salesEl = box.querySelector('.g2-sales');
+  const L = line.getTotalLength(); // real length, for point lookup; dashes use pathLength=1
+  line.style.strokeDasharray = 1; line.style.strokeDashoffset = 1;
+  const M1 = 267.7; // x of the 90-day milestone
+  const on = (sel, v) => box.querySelectorAll(sel).forEach((el) => el.classList.toggle('on', v));
+  // readouts only ever show real milestone values; they tween between them
+  let shown = { a: 0, s: 0 }, target = { a: 0, s: 0 }, raf;
+  function tween() {
+    shown.a += (target.a - shown.a) * 0.12; shown.s += (target.s - shown.s) * 0.12;
+    if (Math.abs(target.a - shown.a) < 0.5) shown = { ...target };
+    accEl.textContent = Math.round(shown.a) + (target.a === 80 && shown.a === 80 ? '+' : '');
+    salesEl.textContent = '$' + Math.round(shown.s) + 'K' + (target.s === 530 && shown.s === 530 ? '+' : '');
+    raf = shown.a !== target.a ? requestAnimationFrame(tween) : null;
+  }
+  function setTarget(a, s) { if (target.a === a) return; target = { a, s }; if (!raf) raf = requestAnimationFrame(tween); }
+  function update() {
+    const b = box.getBoundingClientRect(), vh = innerHeight;
+    // 0 when the chart's top enters the lower part of the screen, 1 when it's comfortably in view
+    const p = reduce || root.classList.contains('nojs') ? 1 : Math.max(0, Math.min(1, (vh * 0.95 - b.top) / (vh * 0.75)));
+    const len = L * p;
+    line.style.strokeDashoffset = 1 - p;
+    const pt = line.getPointAtLength(Math.max(0.01, len));
+    clip.setAttribute('width', pt.x);
+    dot.style.left = pt.x / 10 + '%'; dot.style.top = pt.y / 3.6 + '%';
+    dot.style.opacity = p > 0 ? 1 : 0;
+    const past1 = pt.x >= M1 - 0.5, done = p >= 0.995;
+    on('.p1, .c1, .d1', past1); on('.p2, .c2, .d2', done);
+    setTarget(done ? 323 : past1 ? 80 : 0, done ? 530 : past1 ? 100 : 0);
+  }
+  addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+  addEventListener('resize', update);
+  update();
+})();
 
 /* ---------- record-month bars ---------- */
 function cells(el, n, label) {

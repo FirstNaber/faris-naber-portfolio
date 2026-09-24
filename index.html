@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
 
@@ -89,7 +89,7 @@
   <div class="phone-wrap reveal">
     <div class="phone">
       <div class="phone-screen">
-        <img src="assets/faris-iqos-kiosk.jpg?v=10" alt="Faris Naber at the IQOS kiosk in Austin" width="768" height="1024">
+        <img src="assets/faris-iqos-kiosk.jpg?v=13" alt="Faris Naber at the IQOS kiosk in Austin" width="768" height="1024">
         <i class="island"></i>
       </div>
     </div>
@@ -195,30 +195,65 @@
     <p class="case-sub reveal">A completely cold market, <span class="c-t">turned into recurring revenue.</span></p>
     <div class="case-grid">
       <div class="glass panel reveal">
-        <p>Texas was a completely cold market with a cold approach: store owners who already carried a dozen vendors and wanted no more. I repositioned around what Rep Rally does that they don’t, so “no more vendors” became the opening.</p>
-        <div class="kpis">
-          <div><strong>$<span data-ccount="530">530</span>K+</strong><span>in sales, now recurring</span></div>
-          <div><strong><span data-ccount="323">323</span></strong><span>accounts, from zero</span></div>
+        <p>Texas was a completely cold market with a cold approach: store owners who already carried a dozen vendors and wanted no more.</p>
+        <div class="flip" aria-label="“No more vendors” became the opening">
+          <span class="flip-obj">“No more vendors.”</span>
+          <span class="flip-arrow">↓</span>
+          <span class="flip-open">became the opening.</span>
         </div>
-        <p>Widened the market from c-stores into wholesale-to-wholesale. Held the book through the Sept 2025 Texas category ban.</p>
+        <p>I repositioned around what Rep Rally does that they don’t. Then I widened the market from c-stores into wholesale-to-wholesale, and held the book through the Sept 2025 Texas category ban.</p>
         <p class="sysline">Then the system: I wrote the territory playbook and the cold-store workflow, and lead the fireside meetings that get new reps to their first 10–20 accounts faster.</p>
       </div>
-      <div class="viz-col">
-        <div class="glass panel reveal">
-          <p class="k">1,800 reps nationwide. One of them is <span class="c-t">#3</span>.</p>
+      <div class="glass panel reveal field">
+        <p class="k">1,800 reps nationwide. One of them is <span class="c-t">#3</span>.</p>
+        <div class="dots-wrap">
           <canvas class="dots" aria-label="1,800 dots, one highlighted: rank 3 of 1,800"></canvas>
+          <span class="dots-tip" aria-hidden="true"></span>
         </div>
-        <div class="glass panel growth reveal">
-          <p class="k">Accounts, from zero</p>
-          <svg viewBox="0 0 400 210" role="img" aria-label="Accounts grew from 0 to 80+ in 90 days, and to 323 in just over a year">
-            <line class="ax" x1="40" y1="180" x2="380" y2="180"/>
-            <path class="gl" pathLength="1" d="M40 180 L118 138 L380 22"/>
-            <circle class="gp" cx="40" cy="180" r="4"/><circle class="gp" cx="118" cy="138" r="4"/><circle class="gp end" cx="380" cy="22" r="6"/>
-            <text x="40" y="200">Day 0</text><text x="118" y="200" text-anchor="middle">90 days</text><text x="380" y="200" text-anchor="end">Just over a year</text>
-            <text class="gv" x="110" y="130" text-anchor="end">80+ · $100K</text><text class="gv big" x="366" y="20" text-anchor="end">323</text>
-          </svg>
+        <p class="field-foot"><span class="c-t">#3</span> of 1,800 · top 0.2% · hover the grid</p>
+      </div>
+    </div>
+
+    <div class="glass panel growth2 reveal">
+      <div class="g2-head">
+        <p class="k">Rep Rally Texas · cumulative sales from a cold start</p>
+        <div class="g2-read">
+          <div><strong class="g2-acc">0</strong><span>accounts</span></div>
+          <div><strong class="g2-sales">$0</strong><span>in sales</span></div>
         </div>
       </div>
+      <div class="g2-plot">
+        <svg viewBox="0 0 1000 360" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="g2fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ff0ee" stop-opacity=".32"/><stop offset="1" stop-color="#8ff0ee" stop-opacity="0"/></linearGradient>
+            <clipPath id="g2clip"><rect class="g2-cliprect" x="0" y="0" width="0" height="360"/></clipPath>
+          </defs>
+          <g class="g2-grid"><line x1="60" y1="320" x2="960" y2="320"/><line x1="60" y1="223" x2="960" y2="223"/><line x1="60" y1="126" x2="960" y2="126"/><line x1="60" y1="30" x2="960" y2="30"/></g>
+          <path class="g2-area" clip-path="url(#g2clip)" d="M60 320 C140 319 200 287.8 267.7 268.2 C427.7 221.8 760 145.5 960 45.5 L960 320 Z"/>
+          <path class="g2-line" pathLength="1" d="M60 320 C140 319 200 287.8 267.7 268.2 C427.7 221.8 760 145.5 960 45.5"/>
+          <line class="g2-drop d1" x1="267.7" y1="268.2" x2="267.7" y2="320"/>
+          <line class="g2-drop d2" x1="960" y1="45.5" x2="960" y2="320"/>
+        </svg>
+        <i class="g2-head-dot"></i>
+        <i class="g2-pt p1" style="left:26.77%;top:74.5%"></i>
+        <i class="g2-pt p2" style="left:96%;top:12.64%"></i>
+        <div class="g2-call c1" style="left:26.77%;top:74.5%">
+          <em>First 90 days</em>
+          <b>80+ accounts</b>
+          <b>$100K in sales</b>
+        </div>
+        <div class="g2-call c2" style="left:96%;top:12.64%">
+          <em>Just over a year</em>
+          <b class="c-t">323 accounts</b>
+          <b class="c-t">$530K+ in sales</b>
+        </div>
+        <span class="g2-x x0">Day 0</span><span class="g2-x x1">90 days</span><span class="g2-x x2">Just over a year</span>
+      </div>
+      <div class="g2-legend">
+        <div><em>First 90 days</em><b>80+ accounts · $100K</b></div>
+        <div><em>Just over a year</em><b class="c-t">323 accounts · $530K+</b></div>
+      </div>
+      <p class="g2-note">Accounts reorder, so sales compound as the book grows.</p>
     </div>
   </article>
 
@@ -301,6 +336,6 @@
 </main>
 <footer class="foot"><span>© Faris Naber</span><a href="#top">Back to top ↑</a></footer>
 
-<script src="main.js?v=10"></script>
+<script src="main.js?v=13"></script>
 </body>
 </html>
