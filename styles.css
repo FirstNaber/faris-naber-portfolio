@@ -467,3 +467,17 @@ main,.foot{position:relative;z-index:1}
 .island{top:1.8%;height:3.9%;width:30%;z-index:3}
 .home-bar{position:absolute;bottom:1.4%;left:50%;width:36%;height:4px;margin-left:-18%;border-radius:4px;background:rgba(255,255,255,.85);z-index:2}
 .phone-screen{box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+
+/* ===== camera module v3: iPhone Pro layout (3 lenses on a triangle grid, flash + LiDAR in the gaps) ===== */
+.ph-cam{background:linear-gradient(145deg,#3a3734,#24221f 55%,#2e2b28);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(0,0,0,.55)}
+.ph-cam .lens{width:34%;box-shadow:none;background:
+  radial-gradient(circle at 36% 32%,rgba(255,255,255,.55) 0 2.5%,transparent 4%),
+  radial-gradient(circle at 60% 66%,rgba(140,110,255,.35) 0 6%,transparent 12%),
+  radial-gradient(circle at 50% 50%,#1b2735 0 16%,#070a0e 30%,#000 44%,#0b0b0c 45% 56%,#2a2a2d 57%,#77777d 62%,#3b3b3f 68%,#1a1a1c 70%)}
+.ph-cam .lens:nth-child(1){left:10%;top:10%}
+.ph-cam .lens:nth-child(2){left:10%;top:56%}
+.ph-cam .lens:nth-child(3){left:56%;top:33%}
+.ph-cam .flash{left:64%;right:auto;top:9%;width:15%;background:radial-gradient(circle,#fffbea 0 35%,#e9dcb0 60%,#8a8068 75%,#2a2826 78%)}
+.ph-cam .lidar{left:66%;right:auto;top:auto;bottom:9%;width:11%;background:radial-gradient(circle,#050505 0 55%,#2a2a2d 60%,#111 75%);box-shadow:none}
+.ph-cam .lens{width:38%}
+.ph-cam .lens:nth-child(1){left:8%;top:8%}.ph-cam .lens:nth-child(2){left:8%;top:54%}.ph-cam .lens:nth-child(3){left:54%;top:31%}
