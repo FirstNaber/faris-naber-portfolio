@@ -58,16 +58,22 @@ setTimeout(() => root.classList.add('loaded'), 1200);
     vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
     float d=length(uv);
     float T=t*.006;
-    vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
-    vec2 w=vec2(fbm(uv*1.3+2.9*q+vec2(1.7,9.2)+T*1.2),fbm(uv*1.3+2.9*q+vec2(8.3,2.8)-T));
-    float f=fbm(uv*1.45+3.2*w);
-    vec3 c=mix(vec3(.05,.015,.01),vec3(.62,.12,.04),smoothstep(.15,.8,f));
-    c=mix(c,vec3(1.,.36,.16),smoothstep(.45,.95,f*length(w)*1.3));
-    c=mix(c,vec3(1.,.72,.35),smoothstep(.7,1.1,f*w.x*1.5));
-    float rim=smoothstep(.6,1.,d)*smoothstep(.2,-.9,uv.x);
-    c+=vec3(1.,.45,.15)*rim*.9;
-    c*=1.-smoothstep(.3,1.,d)*.35*smoothstep(-.3,.7,uv.x);
-    float a=1.-smoothstep(.97,1.,d);
+    vec2 q=vec2(fbm(uv*1.3+T),fbm(uv*1.3+vec2(5.2,1.3)-T));
+    vec2 w=vec2(fbm(uv*1.2+2.9*q+vec2(1.7,9.2)+T*1.2),fbm(uv*1.2+2.9*q+vec2(8.3,2.8)-T));
+    float f=fbm(uv*1.45+3.2*w);                       // smoke density
+    float g=fbm(uv*.9+2.*q+vec2(3.3,7.1)+T*.7);        // slow large-scale field
+    // ink tide: the dark smoke slowly floods in and recedes (~70s cycle), unevenly across the disc
+    float tide=.5+.5*sin(t*.09+g*3.2+uv.x*.8-uv.y*.5);
+    float th=mix(.68,.5,tide);                        // tide up = more dark smoke
+    float ink=smoothstep(th-.1,th+.1,(f*.55+g*.45)/.9);
+    // flat coral base with warm highlights, like the reference
+    vec3 coral=vec3(.98,.35,.22);
+    vec3 hot=vec3(1.,.5,.26);
+    vec3 c=mix(coral,hot,smoothstep(.55,.9,1.-f)*.35);
+    c=mix(c,vec3(1.,.66,.3),smoothstep(.85,1.,(1.-f)*(1.-tide)*1.6)*.35);
+    vec3 dark=mix(vec3(.5,.17,.1),vec3(.07,.04,.035),smoothstep(.45,1.,ink));
+    c=mix(c,dark,ink);
+    float a=1.-smoothstep(.992,1.,d);
     gl_FragColor=vec4(c*a,a);
   }`;
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
@@ -79,13 +85,14 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   const loc = gl.getAttribLocation(pr, 'p');
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't');
+  const tOff = +new URLSearchParams(location.search).get('orbt') || 0; // preview a later moment
   let visible = true;
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) requestAnimationFrame(frame); }).observe(cv);
   function frame(t) {
     const s = Math.min(devicePixelRatio || 1, 1.5) * 0.75;
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); }
-    gl.uniform2f(uR, W, H); gl.uniform1f(uT, reduce ? 20 : t / 1000 + 20);
+    gl.uniform2f(uR, W, H); gl.uniform1f(uT, reduce ? 20 : t / 1000 + 20 + tOff);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     const y = scrollY;
     cv.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
