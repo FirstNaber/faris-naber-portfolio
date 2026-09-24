@@ -279,3 +279,6 @@ main,.foot{position:relative;z-index:1}
 .phone-stage::before{content:"";position:absolute;left:50%;top:45%;width:min(900px,120vw);height:min(900px,120vw);transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(140,55,25,.35),rgba(80,30,15,.15) 55%,transparent);pointer-events:none;z-index:-1}
 .phone{--rx:8deg;--ry:-26deg;box-shadow:inset 0 0 0 1.5px #4a4a4c,inset 0 0 0 3px #0a0a0a,6px 0 0 0 #232324,12px 1px 0 0 #1a1a1b,15px 3px 0 -1px #b0442299,40px 60px 120px -20px rgba(0,0,0,.85),0 0 160px -10px rgba(255,90,54,.28)}
 @media(max-width:640px){.mega{font-size:clamp(60px,19vw,120px)}.case-title{font-size:clamp(60px,18vw,120px)}}
+/* portrait: keep the photo's natural ratio, face centred horizontally in the screen */
+.phone-screen img{position:absolute;top:0;left:50%;width:auto;height:100%;max-width:none;object-fit:initial;transform:translateX(-60.5%)}
+.glare{display:none}

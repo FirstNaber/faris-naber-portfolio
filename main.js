@@ -229,18 +229,16 @@ document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 (function phone() {
   const ph = document.querySelector('.phone'), stage = document.querySelector('.phone-stage');
   if (!ph || reduce) return;
-  const glare = ph.querySelector('.glare');
   function tilt(x, y) {
     ph.style.setProperty('--ry', (x * 28) + 'deg');
     ph.style.setProperty('--rx', (-y * 18) + 'deg');
-    glare.style.setProperty('--gx', (x * 60) + '%');
   }
   stage.addEventListener('pointermove', (e) => {
     const b = ph.getBoundingClientRect();
     tilt(Math.max(-1, Math.min(1, (e.clientX - (b.left + b.width / 2)) / (b.width * 1.5))),
          Math.max(-1, Math.min(1, (e.clientY - (b.top + b.height / 2)) / (b.height))));
   });
-  stage.addEventListener('pointerleave', () => { ph.style.removeProperty('--ry'); ph.style.removeProperty('--rx'); glare.style.removeProperty('--gx'); });
+  stage.addEventListener('pointerleave', () => { ph.style.removeProperty('--ry'); ph.style.removeProperty('--rx'); });
   // on touch devices, tilt gently with scroll
   addEventListener('scroll', () => {
     if (matchMedia('(hover: hover)').matches) return;
