@@ -57,7 +57,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
   void main(){
     vec2 uv=(gl_FragCoord.xy*2.-r)/min(r.x,r.y);
     float d=length(uv);
-    float T=t*.06;
+    float T=t*.016;
     vec2 q=vec2(fbm(uv*1.4+T),fbm(uv*1.4+vec2(5.2,1.3)-T));
     vec2 w=vec2(fbm(uv*1.4+3.5*q+vec2(1.7,9.2)+T*1.3),fbm(uv*1.4+3.5*q+vec2(8.3,2.8)-T));
     float f=fbm(uv*1.6+3.8*w);
