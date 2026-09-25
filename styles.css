@@ -480,3 +480,13 @@ main,.foot{position:relative;z-index:1}
 .ph-cam .lidar{left:66%;right:auto;top:auto;bottom:9%;width:11%;background:radial-gradient(circle,#050505 0 55%,#2a2a2d 60%,#111 75%);box-shadow:none}
 .ph-cam .lens{width:38%}
 .ph-cam .lens:nth-child(1){left:8%;top:8%}.ph-cam .lens:nth-child(2){left:8%;top:54%}.ph-cam .lens:nth-child(3){left:54%;top:31%}
+
+/* ===== hero v2: outcome-led ===== */
+.hero-eyebrow{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:28px;opacity:0;transition:opacity 1s .5s}
+.hero-eyebrow i{width:18px;height:1px;background:var(--faint)}
+.loaded .hero-eyebrow,.nojs .hero-eyebrow{opacity:1}
+.hero-proof{list-style:none;display:flex;flex-wrap:wrap;gap:12px 40px;font-size:clamp(14px,1.3vw,17px);color:#d6d6d2}
+.hero-proof li{display:flex;align-items:baseline;gap:10px}
+.hero-proof b{font-family:var(--head);font-weight:800;font-size:clamp(26px,2.4vw,36px);color:var(--ink);letter-spacing:.01em;line-height:1}
+@media(max-width:640px){.hero-proof{flex-direction:column;gap:10px}.hero-eyebrow{font-size:10px;letter-spacing:.16em;gap:6px 10px}.hero-eyebrow i{width:10px}}
+@media(min-width:641px){.hero-title{font-size:clamp(96px,min(16vw,24vh),300px)}.hero{padding-top:100px;padding-bottom:70px}.hero-meta{margin-top:32px}}
