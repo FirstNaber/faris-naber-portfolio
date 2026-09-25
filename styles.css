@@ -522,3 +522,8 @@ main,.foot{position:relative;z-index:1}
   .hv-curve{width:88vw;height:40vh;margin-right:-44vw}
   .hv-bar span{display:none}
 }
+/* 4: page-long ribbon */
+.hv-4 .hv-curve{transform:translateY(-50%)}
+.hv-ribbon-page{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;filter:drop-shadow(0 0 10px rgba(255,90,54,.4))}
+.hv-4 .growth2 .g2-line,.hv-4 .growth2 .g2-area,.hv-4 .growth2 .g2-head-dot{opacity:0}
+.hv-4 .growth2{backdrop-filter:none;-webkit-backdrop-filter:none}
