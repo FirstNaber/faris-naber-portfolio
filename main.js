@@ -48,7 +48,7 @@ setTimeout(() => root.classList.add('loaded'), 1200);
 // mapped through a small palette, time = seconds * 0.2 * 0.97 + 7.
 const FLUID_FS = `
 precision highp float;
-uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform float cyc;uniform float sv; // cyc: teal palette + colour cycling; sv: eased scroll velocity
+uniform vec2 r;uniform float t;uniform sampler2D m;uniform float useMask;uniform float cyc;uniform float sv;uniform float zoom; // cyc: teal palette + colour cycling; sv: eased scroll velocity
 const vec3 C0=vec3(1.,.267,.129);   // #ff4421 coral
 const vec3 C1=vec3(0.);             // #000000
 const vec3 C4=vec3(1.,.361,0.);     // #ff5c00 orange
@@ -76,7 +76,7 @@ void main(){
   float ang=sv*1.6*exp(-dot(dc,dc)/.1); float ca=cos(ang),sa=sin(ang);
   uv+=vec2(ca*dc.x-sa*dc.y,sa*dc.x+ca*dc.y)-dc;
   uv.y-=sv*.25*(1.-length(dc));
-  if(useMask>.5) uv*=2.2;                         // denser pattern: more change inside each letter
+  uv*=zoom;                                        // pattern density (denser inside text)
   float shade=pattern(uv,T,ts);
   float ph=cyc>.5 ? fract(T*.35) : 0.;             // cycle through the palette over time
   vec3 col=cmap(shade,ph);
@@ -86,7 +86,7 @@ void main(){
   gl_FragColor=vec4(col*a,a);
 }`;
 
-function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = false } = {}) {
+function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = false, liveMask = false, zoom } = {}) {
   const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
   if (!gl) return null;
   const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
@@ -100,6 +100,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = f
   gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 'sv');
   gl.uniform1f(gl.getUniformLocation(pr, 'cyc'), 1);
+  gl.uniform1f(gl.getUniformLocation(pr, 'zoom'), zoom ?? (mask ? 2.2 : 1));
   // scroll physics: velocity from scrollY each frame, eased; scrolling also pushes the flow forward in time
   let lastY = scrollY, sv = 0, clock = 0, lastT = null;
   gl.uniform1f(gl.getUniformLocation(pr, 'useMask'), mask ? 1 : 0);
@@ -119,7 +120,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = f
     const s = Math.min(devicePixelRatio || 1, 1.5) * scale;
     const W = Math.round(cv.clientWidth * s), H = Math.round(cv.clientHeight * s);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; gl.viewport(0, 0, W, H); maskDirty = true; }
-    if (mask && maskDirty) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
+    if (mask && (maskDirty || liveMask)) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask(W, H, s)); maskDirty = false; }
     const dt = lastT === null ? 0 : Math.min((t - lastT) / 1000, 0.1); lastT = t;
     if (scrollPhysics && !reduce) {
       const v = (scrollY - lastY) / innerHeight; lastY = scrollY;
@@ -133,7 +134,7 @@ function fluid(cv, { mask, onFrame, scale = 0.75, speed = 0.2, scrollPhysics = f
     if (visible && !reduce) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  return { refresh() { maskDirty = true; requestAnimationFrame(frame); } };
+  return { refresh() { maskDirty = true; } };
 }
 
 /* hero orb */

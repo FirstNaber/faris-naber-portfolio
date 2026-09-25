@@ -490,3 +490,50 @@ main,.foot{position:relative;z-index:1}
 .hero-proof b{font-family:var(--head);font-weight:800;font-size:clamp(26px,2.4vw,36px);color:var(--ink);letter-spacing:.01em;line-height:1}
 @media(max-width:640px){.hero-proof{flex-direction:column;gap:10px}.hero-eyebrow{font-size:10px;letter-spacing:.16em;gap:6px 10px}.hero-eyebrow i{width:10px}}
 @media(min-width:641px){.hero-title{font-size:clamp(96px,min(16vw,24vh),300px)}.hero{padding-top:100px;padding-bottom:70px}.hero-meta{margin-top:32px}}
+
+/* ===== hero variations (?hero=1..6); inactive on the default page ===== */
+.hv #orb{display:none}
+.hv-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.hv-full{z-index:0}
+.hv-1.hv-live .hero-title,.hv-1.hv-live .hero-title .c-o{color:transparent}
+.hv-1 .ln>span{transform:none!important;transition:none}
+.hv-stage{position:absolute;right:4vw;top:50%;width:min(44vw,62vh);height:min(84vh,88vw);z-index:0;pointer-events:none;will-change:transform,opacity}
+.hv-label{position:absolute;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+/* 2 funnel */
+.hv-funnel svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.hv-funnel svg *{fill:none;stroke:rgba(255,255,255,.18);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.hv-funnel .top{left:50%;top:0;transform:translate(-50%,-140%)}
+.hv-funnel .bottom{left:50%;bottom:0;transform:translate(-50%,40%);color:var(--o)}
+/* 3 constellation */
+.hv-sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.hv-me{position:fixed;left:0;top:0;z-index:1;color:var(--ink);font-size:12px;letter-spacing:.14em;pointer-events:none}
+.hv-me b{font-family:var(--head);font-size:26px;letter-spacing:0;color:var(--o);margin-right:6px}
+/* 4 growth line */
+.hv-curve{width:min(50vw,80vh);height:min(62vh,64vw)}
+.hv-curve canvas{filter:drop-shadow(0 0 14px rgba(255,90,54,.45))}
+.hv-curve::before{content:"";position:absolute;left:6%;right:6%;bottom:12%;height:1px;background:rgba(255,255,255,.14)}
+.hv-curve .m1,.hv-curve .m2{transform:translate(-50%,-150%);opacity:0;transition:opacity .5s,transform .6s cubic-bezier(.2,.8,.2,1);color:var(--ink);font-size:12px;letter-spacing:.06em;text-transform:none;text-align:center;line-height:1.5}
+.hv-curve .m2{transform:translate(-95%,-160%)}
+.hv-curve .on{opacity:1}
+.hv-curve em{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.hv-curve .cap{left:6%;bottom:4%}
+/* 5 ribbon */
+.hv-ribbon{position:absolute;left:0;right:0;bottom:-4vh;height:44vh;z-index:0;pointer-events:none}
+.hv-5 .hero-proof{text-shadow:0 2px 14px rgba(0,0,0,.85)}
+/* 6 eclipse */
+.hv-eclipse{width:min(78vw,108vh);height:min(78vw,108vh);right:-14vw}
+.hv-eclipse::before{content:"";position:absolute;inset:-6%;border-radius:50%;background:radial-gradient(closest-side,transparent 86%,rgba(255,90,54,.16) 92%,transparent)}
+/* switcher */
+.hv-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:6px;padding:8px 10px 8px 16px;border-radius:99px;background:rgba(15,15,15,.85);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:12px;color:var(--dim);white-space:nowrap}
+.hv-bar span{margin-right:8px}.hv-bar b{color:var(--ink)}
+.hv-bar a{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.14);color:var(--ink);font-size:12px}
+.hv-bar a:hover{border-color:var(--o)}
+.hv-bar a.on{background:var(--o);border-color:var(--o);color:#000}
+@media(max-width:900px){
+  .hv-stage{right:50%;top:34%;margin-right:calc(min(70vw,48vh) / -2);width:min(70vw,48vh);height:min(60vh,120vw)}
+  .hv-curve{width:88vw;height:40vh;margin-right:-44vw}
+  .hv-eclipse{width:120vw;height:120vw;margin-right:-50vw;right:10vw}
+  .hv-bar span{display:none}
+}
+.hv-funnel{height:min(72vh,80vw);width:min(40vw,52vh);top:46%}
+.hv-eclipse{width:min(62vw,94vh);height:min(62vw,94vh);right:-6vw}
