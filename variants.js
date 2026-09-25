@@ -1,7 +1,7 @@
-/* Hero variations, previewed with ?hero=1..6. The default site (no ?hero) is untouched. */
+/* Hero variations, previewed with ?hero=1, 4 or 5. The default site (no ?hero) is untouched. */
 (function heroVariants() {
   const v = +new URLSearchParams(location.search).get('hero');
-  if (!(v >= 1 && v <= 6)) return;
+  if (![1, 4, 5].includes(v)) return;
 
   const hero = document.querySelector('.hero');
   root.classList.add('hv', 'hv-' + v);
@@ -47,97 +47,6 @@
       const f = fluid(cv, { mask, scale: 0.8, zoom: 1.6, scrollPhysics: true });
       if (f) { root.classList.add('hv-live'); addEventListener('resize', () => f.refresh()); }
     });
-  }
-
-  /* 2 ─ funnel: cold leads pour in at the top, closed deals collect at the bottom */
-  if (v === 2) {
-    const st = stage('hv-funnel');
-    st.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M4 6 L96 6 L55 52 L55 62 L45 62 L45 52 Z" /><circle cx="50" cy="82" r="13" /></svg>`;
-    const cv = canvasIn(st);
-    label(st, 'top', 'Cold leads');
-    label(st, 'bottom', 'Closed deals');
-    const mc = document.createElement('canvas');
-    const mask = (W, H) => {
-      mc.width = W; mc.height = H;
-      const ctx = mc.getContext('2d'), p = progress(), t = performance.now() / 1000;
-      ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff';
-      const X = (x) => x / 100 * W, Y = (y) => y / 100 * H;
-      // funnel body, draining as you scroll
-      ctx.save();
-      ctx.beginPath(); ctx.moveTo(X(4), Y(6)); ctx.lineTo(X(96), Y(6)); ctx.lineTo(X(55), Y(52)); ctx.lineTo(X(55), Y(62)); ctx.lineTo(X(45), Y(62)); ctx.lineTo(X(45), Y(52)); ctx.closePath(); ctx.clip();
-      const level = Y(8 + p * 38);
-      ctx.beginPath(); ctx.moveTo(0, H);
-      for (let x = 0; x <= W; x += W / 40) ctx.lineTo(x, level + Math.sin(x / W * 9 + t * 1.6) * H * 0.008);
-      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      // stream + drops
-      const sw = W * (0.03 + 0.03 * p);
-      ctx.fillRect(X(50) - sw / 2, Y(61), sw, Y(8));
-      for (let i = 0; i < 4; i++) {
-        const k = (t * 0.9 + i / 4) % 1;
-        ctx.beginPath(); ctx.arc(X(50), Y(62) + k * Y(8), sw * (0.7 - k * 0.3), 0, 7); ctx.fill();
-      }
-      // pool of closed deals, filling as you scroll
-      ctx.save();
-      ctx.beginPath(); ctx.arc(X(50), Y(82), Math.min(X(13), Y(13)), 0, 7); ctx.clip();
-      const top = Y(95) - (Y(26)) * (0.25 + 0.75 * p);
-      ctx.beginPath(); ctx.moveTo(0, H);
-      for (let x = 0; x <= W; x += W / 40) ctx.lineTo(x, top + Math.sin(x / W * 14 - t * 2) * H * 0.006);
-      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      return mc;
-    };
-    fluid(cv, { mask, liveMask: true, scale: 0.7, zoom: 1.2, scrollPhysics: true });
-  }
-
-  /* 3 ─ 1,800-rep constellation: the camera flies toward the coral star (#3) as you scroll */
-  if (v === 3) {
-    const cv = document.createElement('canvas'); cv.className = 'hv-sky'; cv.setAttribute('aria-hidden', 'true');
-    document.body.prepend(cv);
-    const tag = label(document.body, 'hv-me', '<b>#3</b> of 1,800 reps');
-    const ctx = cv.getContext('2d');
-    let W, H, dpr;
-    const size = () => { dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    size(); addEventListener('resize', size);
-    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const stars = Array.from({ length: 1800 }, () => ({ x: (rnd() - .5) * 6, y: (rnd() - .5) * 4, z: 0.6 + rnd() * 6 }));
-    const ME = { x: 0.45, y: -0.12, z: 4.2 };
-    stars[2] = ME;
-    const near = stars.map((s, i) => [i, Math.hypot(s.x - ME.x, s.y - ME.y, (s.z - ME.z) * .5)]).sort((a, b) => a[1] - b[1]).slice(1, 8).map((a) => stars[a[0]]);
-    function draw(now) {
-      const p = progress(), e = p * p * (3 - 2 * p), t = now / 1000;
-      const cz = e * 3.85, cx = ME.x * e * 0.85 + Math.sin(t * .05) * .05, cy = ME.y * e * 0.85;
-      const f = Math.min(W, H) * 0.9, ox = W * (innerWidth > 900 ? 0.64 : 0.5), oy = H * 0.5;
-      const proj = (s) => { const z = s.z - cz; if (z < 0.08) return null; return [ox + (s.x - cx) / z * f, oy + (s.y - cy) / z * f, z]; };
-      ctx.clearRect(0, 0, W, H);
-      const pm = proj(ME);
-      if (pm) {
-        ctx.strokeStyle = 'rgba(143,240,238,.22)'; ctx.lineWidth = 1;
-        for (const s of near) { const q = proj(s); if (q) { ctx.beginPath(); ctx.moveTo(pm[0], pm[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); } }
-      }
-      ctx.fillStyle = '#fff';
-      for (const s of stars) {
-        if (s === ME) continue;
-        const q = proj(s); if (!q) continue;
-        const r = clamp(1.6 / q[2], 0.4, 3.2);
-        ctx.globalAlpha = clamp(1.3 / q[2], 0.12, 0.95);
-        ctx.fillRect(q[0] - r / 2, q[1] - r / 2, r, r);
-      }
-      ctx.globalAlpha = 1;
-      if (pm) {
-        const r = clamp(16 / pm[2], 4.5, 60), pulse = reduce ? 0 : (Math.sin(t * 2.2) + 1) / 2;
-        const g = ctx.createRadialGradient(pm[0], pm[1], 0, pm[0], pm[1], r * (4 + pulse * 2));
-        g.addColorStop(0, 'rgba(255,68,33,.55)'); g.addColorStop(1, 'rgba(255,68,33,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pm[0], pm[1], r * (4 + pulse * 2), 0, 7); ctx.fill();
-        ctx.fillStyle = '#ff5a36'; ctx.beginPath(); ctx.arc(pm[0], pm[1], r, 0, 7); ctx.fill();
-        tag.style.transform = `translate(${pm[0] + r + 14}px, ${pm[1] - 10}px)`;
-      }
-      const fade = clamp(1 - (scrollY - innerHeight * 0.9) / (innerHeight * 0.5));
-      cv.style.opacity = fade; tag.style.opacity = fade * clamp(0.35 + p);
-      requestAnimationFrame(draw);
-    }
-    requestAnimationFrame(draw);
   }
 
   /* 4 ─ a glowing line draws itself and becomes the Rep Rally growth curve */
@@ -203,31 +112,11 @@
     fluid(cv, { mask, liveMask: true, scale: 0.6, zoom: 0.9, scrollPhysics: true });
   }
 
-  /* 6 ─ eclipse: only the lit edge of the orb shows; the shadow slides off as you scroll */
-  if (v === 6) {
-    const st = stage('hv-eclipse');
-    const cv = canvasIn(st);
-    const mc = document.createElement('canvas');
-    const mask = (W, H) => {
-      mc.width = W; mc.height = H;
-      const ctx = mc.getContext('2d'), R = Math.min(W, H) / 2 - 2, cx = W / 2, cy = H / 2, p = progress();
-      ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.filter = `blur(${Math.round(R * 0.035)}px)`;
-      const off = R * (0.24 + p * 0.55);
-      ctx.beginPath(); ctx.arc(cx - off, cy + off * 0.18, R * 1.02, 0, 7); ctx.fill();
-      ctx.filter = 'none'; ctx.globalCompositeOperation = 'source-over';
-      return mc;
-    };
-    fluid(cv, { mask, liveMask: true, scale: 0.7, zoom: 1, scrollPhysics: true, speed: 0.15 });
-  }
-
   /* switcher */
   const names = ['Current', 'Fluid headline', 'Funnel', 'Constellation', 'Growth line', 'Ribbon', 'Eclipse'];
   const bar = document.createElement('nav');
   bar.className = 'hv-bar';
   bar.innerHTML = `<span>Hero option <b>${v}</b> · ${names[v]}</span>` +
-    names.map((n, i) => `<a href="${i ? '?hero=' + i : './'}" class="${i === v ? 'on' : ''}" title="${n}">${i || '✕'}</a>`).join('');
+    [0, 1, 4, 5].map((i) => `<a href="${i ? '?hero=' + i : './'}" class="${i === v ? 'on' : ''}" title="${names[i]}">${i || '✕'}</a>`).join('');
   document.body.appendChild(bar);
 })();
