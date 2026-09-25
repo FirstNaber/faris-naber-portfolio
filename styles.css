@@ -74,7 +74,6 @@ main,.foot{position:relative;z-index:1}
 .lg-rr{font-family:system-ui,-apple-system,sans-serif;font-weight:800;font-size:clamp(26px,2.8vw,38px);letter-spacing:-.04em}
 .lg-im{font-family:var(--head);font-weight:800;font-size:clamp(28px,3vw,42px);letter-spacing:.14em;font-style:italic}
 .lg-ird{font-family:Georgia,serif;font-style:italic;font-size:clamp(18px,2vw,26px)}
-.lg-ci{font-family:system-ui,-apple-system,sans-serif;font-weight:600;font-size:clamp(24px,2.6vw,34px);letter-spacing:-.02em}
 
 /* phone */
 .phone-stage{padding:10vh var(--pad) 12vh;display:flex;flex-direction:column;align-items:center;perspective:1400px}
