@@ -291,7 +291,7 @@ function dotField(cv) {
   const line = box.querySelector('.g2-line'), clip = box.querySelector('.g2-cliprect');
   const dot = box.querySelector('.g2-head-dot');
   const accEl = box.querySelector('.g2-acc'), salesEl = box.querySelector('.g2-sales');
-  const L = line.getTotalLength(); // real length, for point lookup; dashes use pathLength=1
+  let L = line.getTotalLength(); // real length, for point lookup; dashes use pathLength=1 (0 while its job is collapsed)
   line.style.strokeDasharray = 1; line.style.strokeDashoffset = 1;
   const M1 = 267.7; // x of the 90-day milestone
   const on = (sel, v) => box.querySelectorAll(sel).forEach((el) => el.classList.toggle('on', v));
@@ -309,6 +309,8 @@ function dotField(cv) {
     const b = box.getBoundingClientRect(), vh = innerHeight;
     // 0 when the chart's top enters the lower part of the screen, 1 when it's comfortably in view
     const p = reduce || root.classList.contains('nojs') ? 1 : Math.max(0, Math.min(1, (vh * 0.95 - b.top) / (vh * 0.75)));
+    if (!L) L = line.getTotalLength();
+    if (!L) return;                     // still collapsed: measure again once it's open
     const len = L * p;
     line.style.strokeDashoffset = 1 - p;
     const pt = line.getPointAtLength(Math.max(0.01, len));
@@ -408,3 +410,9 @@ document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
   apply();
   if (!reduce) requestAnimationFrame(tick);
 })();
+
+/* ---------- jobs open and close: let the charts and counters measure themselves again ---------- */
+document.querySelectorAll('.case-fold').forEach((d) => d.addEventListener('toggle', () => {
+  if (!d.open) return;
+  requestAnimationFrame(() => { dispatchEvent(new Event('resize')); dispatchEvent(new Event('scroll')); });
+}));

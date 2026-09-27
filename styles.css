@@ -527,3 +527,46 @@ main,.foot{position:relative;z-index:1}
 .hv-ribbon-page{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;filter:drop-shadow(0 0 10px rgba(255,90,54,.4))}
 .hv-4 .growth2 .g2-line,.hv-4 .growth2 .g2-area,.hv-4 .growth2 .g2-head-dot{opacity:0}
 .hv-4 .growth2{backdrop-filter:none;-webkit-backdrop-filter:none}
+
+/* ===== jobs collapse: title + one line, the full story behind a toggle ===== */
+.case{margin-top:9vh}
+.case-fold>summary{list-style:none;cursor:pointer;display:block;position:relative;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.case-fold>summary::-webkit-details-marker{display:none}
+.case-fold>summary:focus-visible{outline:2px solid var(--t);outline-offset:6px;border-radius:12px}
+.case-fold .case-sub{margin-bottom:18px}
+.case-toggle{display:inline-flex;align-items:center;gap:12px;padding:12px 20px;border-radius:99px;border:1px solid rgba(255,255,255,.25);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:border-color .25s,background .25s,color .25s}
+.case-toggle i{font-style:normal;font-size:16px;line-height:1;display:inline-block;transition:transform .3s}
+.case-fold>summary:hover .case-toggle{border-color:var(--o);color:var(--o)}
+.case-fold[open]>summary .case-toggle{background:var(--ink);color:#000;border-color:var(--ink)}
+.case-fold[open]>summary .case-toggle i{transform:rotate(45deg)}
+.case-fold[open]>summary .case-toggle b{font-size:0}
+.case-fold[open]>summary .case-toggle b::after{content:"Close";font-size:12px}
+.case-body{padding-top:34px}
+.case-fold[open] .case-body{animation:caseIn .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes caseIn{from{opacity:0;transform:translateY(16px)}}
+.case-fold .case-title{transition:color .3s}
+.case-fold>summary:hover .case-title{background:linear-gradient(180deg,#fff 30%,rgba(255,90,54,.6));-webkit-background-clip:text;background-clip:text}
+
+/* ===== toolkit: everything the studio has built and shipped ===== */
+.caps{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.caps li{display:flex;flex-direction:column;padding:22px 22px 24px;border-radius:22px;transition:transform .3s,border-color .3s}
+.caps li.in:hover{transform:translateY(-4px);border-color:rgba(143,240,238,.45)}
+.caps li>span{font-size:11px;color:var(--dim)}
+.caps h3{font-family:var(--head);font-weight:800;text-transform:uppercase;font-size:clamp(26px,2.2vw,36px);line-height:.95;margin:22px 0 10px}
+.caps p{font-size:12.5px;color:var(--dim);line-height:1.6;flex:1}
+.caps a{margin-top:14px;font-size:12px;color:var(--t);align-self:flex-start;border-bottom:1px solid transparent}
+.caps a:hover{border-color:var(--t)}
+@media(max-width:1100px){.caps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:800px){.caps{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.caps{grid-template-columns:1fr}.caps h3{margin-top:14px}}
+
+/* eight menu items: fit any screen */
+.menu{overflow-y:auto;padding-top:90px;padding-bottom:40px}
+.menu>a{font-size:clamp(40px,min(7.4vw,9.4vh),104px)}
+.menu.open>a:nth-child(7){transition-delay:.24s}.menu.open>a:nth-child(8){transition-delay:.28s}
+@media(max-width:520px){
+  .caps{grid-template-columns:1fr 1fr;gap:10px}
+  .caps li{padding:14px 14px 16px;border-radius:18px}
+  .caps h3{font-size:20px;margin:10px 0 6px}
+  .caps p{font-size:11px;line-height:1.5}
+}
