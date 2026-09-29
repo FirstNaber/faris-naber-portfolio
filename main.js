@@ -284,7 +284,7 @@ function dotField(cv) {
   requestAnimationFrame(draw);
 }
 
-/* ---------- Rep Rally growth chart, scrubbed by scroll ---------- */
+/* ---------- RepRally growth chart, scrubbed by scroll ---------- */
 (function growth() {
   const box = document.querySelector('.growth2');
   if (!box) return;
