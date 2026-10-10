@@ -274,7 +274,7 @@ function dotField(cv) {
     const c = Math.floor((e.clientX - b.left) / cw), rr = Math.floor((e.clientY - b.top) / cw);
     hover = c >= 0 && c < COLS && rr >= 0 && rr < ROWS ? rr * COLS + c : -1;
     if (hover < 0) return;
-    tip.textContent = hover === ME ? '#3 of 1,800 — me' : 'Rep #' + (hover + 1).toLocaleString();
+    tip.textContent = hover === ME ? 'Faris · third-largest account base' : 'Rep #' + (hover + 1).toLocaleString();
     tip.classList.toggle('me', hover === ME);
     tip.style.left = ((hover % COLS + .5) * cw) + 'px';
     tip.style.top = ((Math.floor(hover / COLS) + .5) * cw) + 'px';
