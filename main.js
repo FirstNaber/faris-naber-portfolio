@@ -300,7 +300,7 @@ function dotField(cv) {
   function tween() {
     shown.a += (target.a - shown.a) * 0.12; shown.s += (target.s - shown.s) * 0.12;
     if (Math.abs(target.a - shown.a) < 0.5) shown = { ...target };
-    accEl.textContent = Math.round(shown.a) + (target.a === 80 && shown.a === 80 ? '+' : '');
+    accEl.textContent = Math.round(shown.a) + ((target.a === 80 && shown.a === 80) || (target.a === 300 && shown.a === 300) ? '+' : '');
     salesEl.textContent = '$' + Math.round(shown.s) + 'K' + (target.s === 530 && shown.s === 530 ? '+' : '');
     raf = shown.a !== target.a ? requestAnimationFrame(tween) : null;
   }
@@ -319,7 +319,7 @@ function dotField(cv) {
     dot.style.opacity = p > 0 ? 1 : 0;
     const past1 = pt.x >= M1 - 0.5, done = p >= 0.995;
     on('.p1, .c1, .d1', past1); on('.p2, .c2, .d2', done);
-    setTarget(done ? 323 : past1 ? 80 : 0, done ? 530 : past1 ? 100 : 0);
+    setTarget(done ? 300 : past1 ? 80 : 0, done ? 530 : past1 ? 100 : 0);
   }
   addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
   addEventListener('resize', update);
